@@ -2,6 +2,7 @@ package com.fitcoach.app.data.local.db.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
@@ -12,7 +13,8 @@ import java.util.UUID
         parentColumns = ["id"],
         childColumns = ["workoutId"],
         onDelete = ForeignKey.CASCADE
-    )]
+    )],
+    indices = [Index("workoutId")]
 )
 data class ExerciseSetEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),

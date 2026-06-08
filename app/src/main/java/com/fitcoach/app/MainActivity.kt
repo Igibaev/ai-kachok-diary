@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FitCoachTheme {
-                FitCoachApp()
+                MainAppContent()
             }
         }
     }
@@ -51,7 +51,7 @@ private val bottomNavItems = listOf(
 )
 
 @Composable
-private fun FitCoachApp() {
+private fun MainAppContent() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
