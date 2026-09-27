@@ -17,3 +17,6 @@ proxy/.dev.vars
 app/release/
 *.log
 .kotlin/
+
+# Claude workflow worktrees
+.claude/worktrees/
