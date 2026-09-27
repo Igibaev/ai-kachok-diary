@@ -1,0 +1,21 @@
+{
+  "name": "fitcoach-ai-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI proxy (Cloudflare Worker) for the FitCoach AI white-label fitness app",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "secrets": "echo 'wrangler secret put ANTHROPIC_API_KEY && wrangler secret put APP_TOKEN'"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260927.1",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.142.0"
+  }
+}

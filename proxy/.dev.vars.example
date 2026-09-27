@@ -1,0 +1,3 @@
+# Скопируйте в .dev.vars для локального запуска (wrangler dev). Файл .dev.vars в git не попадает.
+ANTHROPIC_API_KEY=sk-ant-...
+APP_TOKEN=change-me-long-random-string

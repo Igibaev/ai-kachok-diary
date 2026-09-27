@@ -7,3 +7,13 @@ local.properties
 *.keystore
 *.apk
 *.aab
+
+# proxy (Cloudflare Worker)
+proxy/node_modules/
+proxy/.wrangler/
+proxy/.dev.vars
+
+# generated
+app/release/
+*.log
+.kotlin/
