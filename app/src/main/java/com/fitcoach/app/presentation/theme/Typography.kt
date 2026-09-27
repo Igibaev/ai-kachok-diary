@@ -44,7 +44,7 @@ val FitCoachTypography = Typography(
         color = FitCoachColors.TextPrimary
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = FontFamily.Default,
         fontSize = 14.sp,
         fontWeight = FontWeight.Medium,
         color = FitCoachColors.TextPrimary
@@ -56,12 +56,12 @@ val FitCoachTypography = Typography(
         color = FitCoachColors.TextPrimary
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = FontFamily.Default,
         fontSize = 14.sp,
         color = FitCoachColors.TextPrimary
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = FontFamily.Default,
         fontSize = 12.sp,
         color = FitCoachColors.TextSecondary
     ),
@@ -72,13 +72,13 @@ val FitCoachTypography = Typography(
         color = FitCoachColors.TextPrimary
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = FontFamily.Default,
         fontSize = 12.sp,
         fontWeight = FontWeight.Medium,
         color = FitCoachColors.TextSecondary
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Monospace,
+        fontFamily = FontFamily.Default,
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.5.sp,

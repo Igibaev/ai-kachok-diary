@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +28,9 @@ fun DashboardScreen(
     onStartWorkout: (String) -> Unit,
     onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenWater: () -> Unit = {},
+    onOpenQrPass: () -> Unit = {},
+    onOpenPrograms: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -108,7 +112,7 @@ fun DashboardScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = FitCoachColors.Accent
                                 )
-                                val template = com.fitcoach.app.domain.model.WorkoutPlan.getTemplate(state.todayWorkoutKey!!)
+                                val template = com.fitcoach.app.domain.model.WorkoutPlan.getTemplate(state.profile.programKey, state.todayWorkoutKey!!)
                                 Text(
                                     text = template?.phaseName ?: "",
                                     fontSize = 14.sp,
@@ -166,7 +170,7 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Water
-                    FitCard(modifier = Modifier.weight(1f)) {
+                    FitCard(modifier = Modifier.weight(1f).clickable { onOpenWater() }) {
                         Text("ВОДА", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                         Spacer(Modifier.height(8.dp))
                         CircularProgress(
@@ -264,7 +268,7 @@ fun DashboardScreen(
                             Text("AI Тренер", fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
                             Text("Спроси о тренировке или питании", fontSize = 12.sp, color = FitCoachColors.TextMuted)
                         }
-                        Icon(Icons.Default.ArrowForwardIos, contentDescription = null, tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
                     }
                 }
 

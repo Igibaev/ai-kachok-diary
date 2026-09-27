@@ -34,6 +34,7 @@ import com.fitcoach.app.presentation.theme.FitCoachColors
 fun WorkoutActiveScreen(
     workoutId: String,
     onFinished: () -> Unit,
+    onOpenChat: () -> Unit = {},
     viewModel: WorkoutActiveViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()

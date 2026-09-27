@@ -41,7 +41,7 @@ class BuildSystemPromptUseCase @Inject constructor() {
 
 ## ПОСЛЕДНИЕ ТРЕНИРОВКИ
 ${recentWorkouts.take(5).joinToString("\n") { w ->
-    "- ${formatDate(w.date)}: ${w.planKey}, боль в спине: ${w.backPainLevel}/10, ${if (w.isCompleted) "выполнена" else "не завершена"}"
+    "- ${formatDate(w.date)}: ${w.planKey}, дискомфорт: ${w.painLevel}/10, ${if (w.isCompleted) "выполнена" else "не завершена"}"
 }}
 
 ## ТВОИ ПРАВИЛА

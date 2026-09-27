@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.*
@@ -42,7 +41,7 @@ class WorkoutHistoryViewModel @Inject constructor(
 @Composable
 fun WorkoutHistoryScreen(
     onWorkoutClick: (String) -> Unit,
-    onBack: () -> Unit,
+    onOpenPrograms: () -> Unit = {},
     viewModel: WorkoutHistoryViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsState()
@@ -53,11 +52,6 @@ fun WorkoutHistoryScreen(
         topBar = {
             TopAppBar(
                 title = { Text("История тренировок", color = FitCoachColors.TextPrimary) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, tint = FitCoachColors.TextPrimary)
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FitCoachColors.Surface)
             )
         }
@@ -103,13 +97,13 @@ private fun WorkoutHistoryCard(workout: Workout, df: SimpleDateFormat, onClick: 
                 } else {
                     Icon(Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = FitCoachColors.TextMuted)
                 }
-                if (workout.backPainLevel > 0) {
+                if (workout.painLevel > 0) {
                     Text(
-                        text = "Боль: ${workout.backPainLevel}/10",
+                        text = "Боль: ${workout.painLevel}/10",
                         fontSize = 11.sp,
                         color = when {
-                            workout.backPainLevel <= 3 -> FitCoachColors.Success
-                            workout.backPainLevel <= 6 -> FitCoachColors.Warning
+                            workout.painLevel <= 3 -> FitCoachColors.Success
+                            workout.painLevel <= 6 -> FitCoachColors.Warning
                             else -> FitCoachColors.Error
                         }
                     )

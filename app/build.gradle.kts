@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,6 +9,64 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// ---------------------------------------------------------------------------------------------
+// White-label: каждый файл brands/<name>.properties становится product flavor <name>.
+// Новый клиент = новый файл + (опционально) папка app/src/<name>/res с логотипом и иконкой.
+// ---------------------------------------------------------------------------------------------
+val brandFiles: List<File> = rootProject.file("brands")
+    .listFiles { f -> f.isFile && f.extension == "properties" }
+    ?.sortedBy { it.name }
+    ?: emptyList()
+require(brandFiles.isNotEmpty()) { "Не найдено ни одного файла brands/*.properties" }
+
+fun loadBrand(file: File): Properties = Properties().apply {
+    file.reader(Charsets.UTF_8).use { load(it) }
+}
+
+fun Properties.str(key: String, default: String = ""): String =
+    getProperty(key)?.trim()?.takeIf { it.isNotEmpty() } ?: default
+
+fun quoted(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+fun String.toConstName(): String =
+    replace(Regex("([a-z0-9])([A-Z])"), "$1_$2").uppercase()
+
+/** Строковые поля бренда, попадающие в BuildConfig (см. BrandConfig.kt). */
+val brandStringKeys = listOf(
+    "appName", "brandName", "aiCoachName", "defaultLanguage",
+    "clubName", "clubCity", "clubAddress", "clubHours", "clubPhone", "clubWhatsapp",
+    "clubInstagram", "clubMapUrl", "clubWebsite", "clubDataUrl", "newsUrl",
+    "accentColor", "accentOnColor", "backgroundColor", "surfaceColor", "cardColor",
+    "aiProxyUrl", "aiProxyToken", "aiModel"
+)
+
+
+/** Контраст акцента к фону (WCAG relative luminance). Слишком тёмный акцент на тёмном фоне — ошибка сборки. */
+fun luminance(hex: String): Double {
+    val clean = hex.trim().removePrefix("#").takeLast(6)
+    val rgb = clean.toLongOrNull(16) ?: return 0.0
+    fun channel(v: Long): Double { val c = v / 255.0; return if (c <= 0.03928) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4) }
+    return 0.2126 * channel((rgb shr 16) and 0xFF) + 0.7152 * channel((rgb shr 8) and 0xFF) + 0.0722 * channel(rgb and 0xFF)
+}
+fun contrast(a: String, b: String): Double {
+    val la = luminance(a); val lb = luminance(b)
+    return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
+}
+brandFiles.forEach { file ->
+    val p = loadBrand(file)
+    val ratio = contrast(p.str("accentColor", "#C8FF00"), p.str("backgroundColor", "#0D0D0D"))
+    require(ratio >= 3.0) {
+        "Бренд ${file.name}: контраст accentColor/backgroundColor = ${"%.2f".format(ratio)} (< 3.0). Выберите более светлый акцент или более тёмный фон."
+    }
+}
+
+val appVersionCode: Int = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
+
+// Подпись релиза: переменные окружения KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD.
+// Без них release подписывается debug-ключом (удобно для демо, НЕ для Google Play).
+val keystorePath: String? = System.getenv("KEYSTORE_PATH") ?: (project.findProperty("KEYSTORE_PATH") as String?)
+
 android {
     namespace = "com.fitcoach.app"
     compileSdk = 35
@@ -15,30 +75,77 @@ android {
         applicationId = "com.fitcoach.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    flavorDimensions += "brand"
+    productFlavors {
+        brandFiles.forEach { file ->
+            val p = loadBrand(file)
+            val flavorName = file.nameWithoutExtension
+            create(flavorName) {
+                dimension = "brand"
+                applicationId = p.str("applicationId", "com.fitcoach.$flavorName")
+                versionName = p.str("versionName", "1.0.0")
+
+                resValue("string", "app_name", p.str("appName", "FitCoach AI"))
+                resValue("color", "ic_launcher_background", p.str("backgroundColor", "#0D0D0D"))
+                resValue("color", "ic_launcher_foreground", p.str("accentColor", "#C8FF00"))
+
+                buildConfigField("String", "BRAND_ID", quoted(flavorName))
+                brandStringKeys.forEach { key ->
+                    buildConfigField("String", key.toConstName(), quoted(p.str(key)))
+                }
+            }
+        }
+    }
+
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (keystorePath != null) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    packaging {
+        resources.excludes += setOf("META-INF/*.kotlin_module", "META-INF/LICENSE*", "META-INF/AL2.0", "META-INF/LGPL2.1")
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -54,6 +161,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons)
+    implementation(libs.androidx.splashscreen)
 
     // Hilt
     implementation(libs.hilt.android)
@@ -91,15 +199,14 @@ dependencies {
     // Security
     implementation(libs.security.crypto)
 
-    // Vico Charts
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-    implementation(libs.vico.core)
-
     // Coil
     implementation(libs.coil.compose)
 
+    // QR (пропуск участника)
+    implementation(libs.zxing.core)
+
     testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

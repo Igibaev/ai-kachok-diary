@@ -68,7 +68,7 @@ class WaterViewModel @Inject constructor(
 }
 
 @Composable
-fun WaterScreen(viewModel: WaterViewModel = hiltViewModel()) {
+fun WaterScreen(onBack: () -> Unit = {}, viewModel: WaterViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
     var customInput by remember { mutableStateOf("") }
     val df = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }

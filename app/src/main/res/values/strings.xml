@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FitCoach AI</string>
+    <!-- app_name генерируется из brands/*.properties (resValue). -->
+    <string name="notification_channel_water">Напоминания о воде</string>
+    <string name="notification_channel_workout">Напоминания о тренировках</string>
 </resources>

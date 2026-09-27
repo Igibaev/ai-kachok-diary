@@ -21,8 +21,9 @@ datastore = "1.1.1"
 workManager = "2.9.1"
 security = "1.1.0-alpha06"
 ksp = "2.0.0-1.0.24"
-vico = "1.13.1"
 coil = "2.7.0"
+zxing = "3.5.3"
+splashscreen = "1.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -60,10 +61,10 @@ navigation-compose = { group = "androidx.navigation", name = "navigation-compose
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 workmanager = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security" }
-vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
-vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
-vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+androidx-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

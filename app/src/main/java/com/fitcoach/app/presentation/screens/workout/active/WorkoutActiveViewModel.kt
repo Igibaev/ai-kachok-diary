@@ -1,13 +1,15 @@
 package com.fitcoach.app.presentation.screens.workout.active
 
-import android.os.CountDownTimer
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitcoach.app.domain.model.*
 import com.fitcoach.app.domain.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -45,6 +47,10 @@ data class WorkoutActiveUiState(
     val elapsedSeconds: Long = 0
 )
 
+/**
+ * Базовая версия (агент «Программы» заменит на полную: ввод веса/повторов, отмена сета, bottom-sheet таймер).
+ * Исправлено относительно исходника: загрузка тренировки по id, честный таймер длительности.
+ */
 @HiltViewModel
 class WorkoutActiveViewModel @Inject constructor(
     private val workoutRepo: WorkoutRepository,
@@ -56,18 +62,28 @@ class WorkoutActiveViewModel @Inject constructor(
     private val _state = MutableStateFlow(WorkoutActiveUiState())
     val state = _state.asStateFlow()
 
-    private var restTimer: CountDownTimer? = null
+    private var restJob: Job? = null
+    private var elapsedJob: Job? = null
 
     init {
         loadWorkout()
+        startElapsedTimer()
+    }
+
+    private fun startElapsedTimer() {
+        elapsedJob = viewModelScope.launch {
+            while (isActive) {
+                delay(1000)
+                _state.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
+            }
+        }
     }
 
     private fun loadWorkout() {
         viewModelScope.launch {
+            val workout = workoutRepo.getWorkoutById(workoutId)
+            val template = workout?.let { WorkoutPlan.getTemplate(it.programKey, it.planKey) }
             workoutRepo.getSetsForWorkout(workoutId).collect { sets ->
-                val workout = workoutRepo.getWorkoutForDate(System.currentTimeMillis())
-                val template = workout?.planKey?.let { WorkoutPlan.getTemplate(it) }
-
                 val groupedSets = sets.groupBy { it.exerciseId }
                 val exercises = template?.exercises?.map { ex ->
                     ExerciseUiState(
@@ -77,7 +93,7 @@ class WorkoutActiveViewModel @Inject constructor(
                         tip = ex.tip,
                         youtubeQuery = ex.youtubeSearchQuery
                     )
-                } ?: emptyList()
+                } ?: groupedSets.map { (id, list) -> ExerciseUiState(id, list.first().exerciseName, list) }
 
                 _state.update {
                     it.copy(
@@ -100,59 +116,51 @@ class WorkoutActiveViewModel @Inject constructor(
 
     fun markSetDone(set: ExerciseSet, actualReps: Int? = null, actualWeight: Float? = null) {
         viewModelScope.launch {
-            workoutRepo.markSetDone(set, actualReps, actualWeight)
+            workoutRepo.markSetDone(set, actualReps ?: set.targetReps, actualWeight)
 
-            // Find next set to determine rest time
             val currentState = _state.value
             val currentExercise = currentState.exercises.find { it.exerciseId == set.exerciseId }
             val nextSetInExercise = currentExercise?.sets?.firstOrNull { !it.isDone && it.id != set.id }
-
             val nextExercise = if (nextSetInExercise == null) {
-                val currentExIdx = currentState.exercises.indexOfFirst { it.exerciseId == set.exerciseId }
-                currentState.exercises.getOrNull(currentExIdx + 1)
+                val idx = currentState.exercises.indexOfFirst { it.exerciseId == set.exerciseId }
+                currentState.exercises.drop(idx + 1).firstOrNull { ex -> ex.sets.any { !it.isDone } }
             } else null
 
-            val restSeconds = currentExercise?.sets?.firstOrNull()?.restSeconds ?: 90
+            val remainingAfter = currentState.exercises.sumOf { ex -> ex.sets.count { !it.isDone && it.id != set.id } }
+            if (remainingAfter == 0) {
+                _state.update { it.copy(phase = WorkoutPhase.Cooldown) }
+                return@launch
+            }
+
+            val restSeconds = set.restSeconds.takeIf { it > 0 } ?: 90
             val nextName = nextSetInExercise?.exerciseName ?: nextExercise?.name ?: "Заминка"
             val nextSetNum = nextSetInExercise?.setNumber ?: 1
-
             startRestTimer(restSeconds, nextName, nextSetNum)
         }
     }
 
     private fun startRestTimer(totalSeconds: Int, nextExerciseName: String, nextSetNumber: Int) {
-        restTimer?.cancel()
-        _state.update {
-            it.copy(phase = WorkoutPhase.RestTimer(totalSeconds, totalSeconds, nextExerciseName, nextSetNumber))
+        restJob?.cancel()
+        _state.update { it.copy(phase = WorkoutPhase.RestTimer(totalSeconds, totalSeconds, nextExerciseName, nextSetNumber)) }
+        restJob = viewModelScope.launch {
+            var remaining = totalSeconds
+            while (remaining > 0 && isActive) {
+                delay(1000)
+                remaining--
+                _state.update { s -> s.copy(phase = WorkoutPhase.RestTimer(remaining, totalSeconds, nextExerciseName, nextSetNumber)) }
+            }
+            if (isActive) checkAllDone()
         }
-
-        restTimer = object : CountDownTimer(totalSeconds * 1000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                val remaining = (millisUntilFinished / 1000).toInt()
-                _state.update { state ->
-                    state.copy(phase = WorkoutPhase.RestTimer(remaining, totalSeconds, nextExerciseName, nextSetNumber))
-                }
-            }
-
-            override fun onFinish() {
-                checkAllDone()
-            }
-        }.start()
     }
 
     fun skipRest() {
-        restTimer?.cancel()
+        restJob?.cancel()
         checkAllDone()
     }
 
     private fun checkAllDone() {
-        val state = _state.value
-        val allDone = state.exercises.all { ex -> ex.sets.all { it.isDone } }
-        _state.update {
-            it.copy(
-                phase = if (allDone) WorkoutPhase.Cooldown else WorkoutPhase.ExerciseList
-            )
-        }
+        val allDone = _state.value.exercises.all { ex -> ex.sets.all { it.isDone } }
+        _state.update { it.copy(phase = if (allDone) WorkoutPhase.Cooldown else WorkoutPhase.ExerciseList) }
     }
 
     fun finishCooldown() {
@@ -162,18 +170,20 @@ class WorkoutActiveViewModel @Inject constructor(
     fun submitBackPain(painLevel: Int) {
         viewModelScope.launch {
             val workout = _state.value.workout ?: return@launch
-            val updatedWorkout = workout.copy(
+            elapsedJob?.cancel()
+            val updated = workout.copy(
                 isCompleted = true,
-                backPainLevel = painLevel,
-                durationMinutes = (_state.value.elapsedSeconds / 60).toInt()
+                painLevel = painLevel,
+                durationMinutes = (_state.value.elapsedSeconds / 60).toInt().coerceAtLeast(1)
             )
-            workoutRepo.updateWorkout(updatedWorkout)
-            _state.update { it.copy(phase = WorkoutPhase.Summary) }
+            workoutRepo.updateWorkout(updated)
+            _state.update { it.copy(workout = updated, phase = WorkoutPhase.Summary) }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        restTimer?.cancel()
+        restJob?.cancel()
+        elapsedJob?.cancel()
     }
 }

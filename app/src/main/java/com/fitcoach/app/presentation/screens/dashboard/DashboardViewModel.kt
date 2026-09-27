@@ -52,7 +52,7 @@ class DashboardViewModel @Inject constructor(
                 val p = profile ?: UserProfile()
                 val startDate = LocalDate.ofEpochDay(p.programStartDate / 86400000L)
                 val currentWeek = WorkoutPlan.getCurrentWeek(startDate)
-                val todayKey = WorkoutPlan.getWorkoutForDate(LocalDate.now(), startDate)
+                val todayKey = WorkoutPlan.getWorkoutForDate(LocalDate.now(), startDate, p.programKey)
 
                 DashboardUiState(
                     profile = p,
@@ -74,8 +74,8 @@ class DashboardViewModel @Inject constructor(
             val profile = userRepo.getProfile() ?: return@launch
             val startDate = LocalDate.ofEpochDay(profile.programStartDate / 86400000L)
             val today = LocalDate.now()
-            val planKey = WorkoutPlan.getWorkoutForDate(today, startDate) ?: return@launch
-            val template = WorkoutPlan.getTemplate(planKey) ?: return@launch
+            val planKey = WorkoutPlan.getWorkoutForDate(today, startDate, profile.programKey) ?: return@launch
+            val template = WorkoutPlan.getTemplate(profile.programKey, planKey) ?: return@launch
             val currentWeek = WorkoutPlan.getCurrentWeek(startDate)
 
             val todayMillis = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -85,12 +85,14 @@ class DashboardViewModel @Inject constructor(
                 val newWorkout = Workout(
                     id = java.util.UUID.randomUUID().toString(),
                     date = todayMillis,
+                    programKey = profile.programKey,
                     planKey = planKey,
                     phaseName = template.phaseName,
                     weekNumber = currentWeek,
                     isCompleted = false,
                     durationMinutes = null,
-                    backPainLevel = 0,
+                    painLevel = 0,
+                    rpe = 0,
                     notes = ""
                 )
                 val workoutId = workoutRepo.saveWorkout(newWorkout)

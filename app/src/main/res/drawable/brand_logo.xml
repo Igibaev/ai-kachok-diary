@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Логотип бренда по умолчанию. Для клиента положите свой файл brand_logo.xml (или .png в drawable-nodpi)
+     в app/src/<brand>/res/drawable/ — он переопределит этот. Рекомендуемый размер: квадрат, прозрачный фон. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M28,45 L68,45 L68,51 L28,51 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M20,34 h8 a2,2 0 0 1 2,2 v24 a2,2 0 0 1 -2,2 h-8 a2,2 0 0 1 -2,-2 v-24 a2,2 0 0 1 2,-2 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M12,39 h5 a2,2 0 0 1 2,2 v14 a2,2 0 0 1 -2,2 h-5 a2,2 0 0 1 -2,-2 v-14 a2,2 0 0 1 2,-2 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M68,34 h8 a2,2 0 0 1 2,2 v24 a2,2 0 0 1 -2,2 h-8 a2,2 0 0 1 -2,-2 v-24 a2,2 0 0 1 2,-2 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M79,39 h5 a2,2 0 0 1 2,2 v14 a2,2 0 0 1 -2,2 h-5 a2,2 0 0 1 -2,-2 v-14 a2,2 0 0 1 2,-2 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_foreground"
+        android:pathData="M72,14 L74.4,21 L81.4,23.4 L74.4,25.8 L72,32.8 L69.6,25.8 L62.6,23.4 L69.6,21 Z" />
+</vector>

@@ -7,9 +7,9 @@ import com.fitcoach.app.data.local.db.entity.WorkoutEntity
 import com.fitcoach.app.domain.model.ExerciseSet
 import com.fitcoach.app.domain.model.Workout
 import com.fitcoach.app.domain.repository.WorkoutRepository
+import com.fitcoach.app.domain.util.DayBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.Calendar
 import javax.inject.Inject
 
 class WorkoutRepositoryImpl @Inject constructor(
@@ -18,22 +18,32 @@ class WorkoutRepositoryImpl @Inject constructor(
 ) : WorkoutRepository {
 
     override fun getAllWorkouts(): Flow<List<Workout>> =
-        workoutDao.getAllWorkouts().map { entities ->
-            entities.map { it.toDomain() }
-        }
+        workoutDao.getAllWorkouts().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun getWorkoutForDate(dateMillis: Long): Workout? {
-        val (start, end) = dayBounds(dateMillis)
+        val (start, end) = DayBounds.of(dateMillis)
         return workoutDao.getWorkoutForDate(start, end)?.toDomain()
     }
 
     override fun observeWorkoutForDate(dateMillis: Long): Flow<Workout?> {
-        val (start, end) = dayBounds(dateMillis)
+        val (start, end) = DayBounds.of(dateMillis)
         return workoutDao.observeWorkoutForDate(start, end).map { it?.toDomain() }
     }
 
+    override suspend fun getWorkoutById(id: String): Workout? =
+        workoutDao.getWorkoutById(id)?.toDomain()
+
+    override fun observeWorkoutById(id: String): Flow<Workout?> =
+        workoutDao.observeWorkoutById(id).map { it?.toDomain() }
+
     override suspend fun getRecentWorkouts(limit: Int): List<Workout> =
         workoutDao.getRecentWorkouts(limit).map { it.toDomain() }
+
+    override suspend fun getWorkoutsSince(sinceMillis: Long): List<Workout> =
+        workoutDao.getWorkoutsSince(sinceMillis).map { it.toDomain() }
+
+    override fun observeCompletedWorkouts(): Flow<List<Workout>> =
+        workoutDao.observeCompletedWorkouts().map { list -> list.map { it.toDomain() } }
 
     override suspend fun saveWorkout(workout: Workout): String {
         val entity = workout.toEntity()
@@ -44,52 +54,54 @@ class WorkoutRepositoryImpl @Inject constructor(
     override suspend fun updateWorkout(workout: Workout) =
         workoutDao.updateWorkout(workout.toEntity())
 
+    override suspend fun deleteWorkout(workout: Workout) =
+        workoutDao.deleteWorkout(workout.toEntity())
+
+    override suspend fun deleteAllWorkouts() = workoutDao.deleteAll()
+
     override fun getCompletedWorkoutCount(): Flow<Int> =
         workoutDao.getCompletedWorkoutCount()
 
     override fun getSetsForWorkout(workoutId: String): Flow<List<ExerciseSet>> =
-        exerciseSetDao.getSetsForWorkout(workoutId).map { entities ->
-            entities.map { it.toDomain() }
-        }
+        exerciseSetDao.getSetsForWorkout(workoutId).map { entities -> entities.map { it.toDomain() } }
+
+    override suspend fun getSetsForWorkoutSync(workoutId: String): List<ExerciseSet> =
+        exerciseSetDao.getSetsForWorkoutSync(workoutId).map { it.toDomain() }
 
     override suspend fun markSetDone(set: ExerciseSet, actualReps: Int?, actualWeight: Float?) {
         val entity = set.toEntity().copy(isDone = true, actualReps = actualReps, actualWeight = actualWeight)
         exerciseSetDao.updateSet(entity)
     }
 
+    override suspend fun updateSet(set: ExerciseSet) = exerciseSetDao.updateSet(set.toEntity())
+
     override suspend fun insertSets(sets: List<ExerciseSet>) {
         exerciseSetDao.insertSets(sets.map { it.toEntity() })
     }
 
-    private fun dayBounds(millis: Long): Pair<Long, Long> {
-        val cal = Calendar.getInstance().apply { timeInMillis = millis }
-        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
-        val start = cal.timeInMillis
-        cal.add(Calendar.DAY_OF_MONTH, 1)
-        return start to cal.timeInMillis
-    }
+    override suspend fun getLastResultForExercise(exerciseId: String): ExerciseSet? =
+        exerciseSetDao.getLastDoneSetsForExercise(exerciseId, 1).firstOrNull()?.toDomain()
 }
 
-private fun WorkoutEntity.toDomain() = Workout(
-    id = id, date = date, planKey = planKey, phaseName = phaseName,
+fun WorkoutEntity.toDomain() = Workout(
+    id = id, date = date, programKey = programKey, planKey = planKey, phaseName = phaseName,
     weekNumber = weekNumber, isCompleted = isCompleted, durationMinutes = durationMinutes,
-    backPainLevel = backPainLevel, notes = notes
+    painLevel = painLevel, rpe = rpe, notes = notes
 )
 
-private fun Workout.toEntity() = WorkoutEntity(
-    id = id, date = date, planKey = planKey, phaseName = phaseName,
+fun Workout.toEntity() = WorkoutEntity(
+    id = id, date = date, programKey = programKey, planKey = planKey, phaseName = phaseName,
     weekNumber = weekNumber, isCompleted = isCompleted, durationMinutes = durationMinutes,
-    backPainLevel = backPainLevel, notes = notes
+    painLevel = painLevel, rpe = rpe, notes = notes
 )
 
-private fun ExerciseSetEntity.toDomain() = ExerciseSet(
+fun ExerciseSetEntity.toDomain() = ExerciseSet(
     id = id, workoutId = workoutId, exerciseId = exerciseId, exerciseName = exerciseName,
     setNumber = setNumber, targetReps = targetReps, actualReps = actualReps,
     targetWeight = targetWeight, actualWeight = actualWeight, isDone = isDone, restSeconds = restSeconds
 )
 
-private fun ExerciseSet.toEntity() = ExerciseSetEntity(
+fun ExerciseSet.toEntity() = ExerciseSetEntity(
     id = id, workoutId = workoutId, exerciseId = exerciseId, exerciseName = exerciseName,
     setNumber = setNumber, targetReps = targetReps, actualReps = actualReps,
     targetWeight = targetWeight, actualWeight = actualWeight, isDone = isDone, restSeconds = restSeconds

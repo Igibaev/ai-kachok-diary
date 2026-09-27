@@ -316,7 +316,8 @@ object WorkoutPlan {
     private val phase2Schedule = mapOf(1 to "A2", 3 to "B2", 5 to "C2", 6 to "D2")
     private val phase3Schedule = mapOf(1 to "A3", 3 to "B3", 5 to "C3", 6 to "D3")
 
-    fun getWorkoutForDate(date: LocalDate, startDate: LocalDate): String? {
+    /** programKey пока игнорируется: одна программа. Агент «Программы» заменит на ProgramCatalog. */
+    fun getWorkoutForDate(date: LocalDate, startDate: LocalDate, programKey: String = ""): String? {
         val dayOfProgram = ChronoUnit.DAYS.between(startDate, date).toInt()
         if (dayOfProgram < 0) return null
 
@@ -335,12 +336,15 @@ object WorkoutPlan {
     }
 
     fun getTemplate(key: String): WorkoutTemplate? = workouts[key]
+    fun getTemplate(programKey: String, key: String): WorkoutTemplate? = workouts[key]
 
     fun getCurrentWeek(startDate: LocalDate): Int {
         val today = LocalDate.now()
         val days = ChronoUnit.DAYS.between(startDate, today).toInt()
         return (days / 7 + 1).coerceIn(1, 12)
     }
+
+    fun getPhaseName(programKey: String, weekNumber: Int): String = getPhaseName(weekNumber)
 
     fun getPhaseName(weekNumber: Int): String = when {
         weekNumber <= 4 -> "Фаза I"

@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -112,7 +114,7 @@ fun AddFoodScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Добавить еду", color = FitCoachColors.TextPrimary) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, null, tint = FitCoachColors.TextPrimary) } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = FitCoachColors.TextPrimary) } },
                 actions = {
                     TextButton(onClick = { showManual = true }) { Text("Вручную", color = FitCoachColors.Accent) }
                 },

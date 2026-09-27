@@ -60,6 +60,7 @@ class NutritionViewModel @Inject constructor(
 @Composable
 fun NutritionScreen(
     onAddFood: (String) -> Unit,
+    onOpenWater: () -> Unit = {},
     viewModel: NutritionViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -141,7 +142,7 @@ private fun MealCard(
         }
 
         if (entries.isNotEmpty()) {
-            Divider(color = FitCoachColors.Border, modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(color = FitCoachColors.Border, modifier = Modifier.padding(vertical = 8.dp))
             entries.forEach { entry ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),

@@ -2,6 +2,7 @@ package com.fitcoach.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.fitcoach.app.BuildConfig
 import com.fitcoach.app.data.local.db.AppDatabase
 import com.fitcoach.app.data.local.db.PrepopulateCallback
 import com.fitcoach.app.data.remote.api.AnthropicApi
@@ -34,6 +35,8 @@ object AppModule {
                     db?.let { PrepopulateCallback(it).onCreate(database) }
                 }
             })
+            // Приложение ещё не опубликовано: при смене схемы база пересоздаётся.
+            .fallbackToDestructiveMigration()
             .build()
         return db
     }
@@ -43,16 +46,20 @@ object AppModule {
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
+        encodeDefaults = true
     }
 
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        })
+        .apply {
+            if (BuildConfig.DEBUG) {
+                // Заголовки (в т.ч. ключи) в лог не пишем даже в debug.
+                addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC })
+            }
+        }
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
         .build()
 
     @Provides

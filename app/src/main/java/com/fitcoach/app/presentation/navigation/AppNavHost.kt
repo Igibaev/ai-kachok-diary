@@ -2,19 +2,25 @@ package com.fitcoach.app.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.fitcoach.app.presentation.screens.chat.ChatScreen
+import com.fitcoach.app.presentation.screens.club.ClubScreen
+import com.fitcoach.app.presentation.screens.club.QrPassScreen
 import com.fitcoach.app.presentation.screens.dashboard.DashboardScreen
 import com.fitcoach.app.presentation.screens.nutrition.AddFoodScreen
 import com.fitcoach.app.presentation.screens.nutrition.NutritionScreen
+import com.fitcoach.app.presentation.screens.onboarding.OnboardingScreen
+import com.fitcoach.app.presentation.screens.programs.ProgramsScreen
 import com.fitcoach.app.presentation.screens.progress.ProgressScreen
 import com.fitcoach.app.presentation.screens.settings.SettingsScreen
 import com.fitcoach.app.presentation.screens.water.WaterScreen
 import com.fitcoach.app.presentation.screens.workout.active.WorkoutActiveScreen
+import com.fitcoach.app.presentation.screens.workout.detail.WorkoutDetailScreen
 import com.fitcoach.app.presentation.screens.workout.history.WorkoutHistoryScreen
 
 @Composable
@@ -28,11 +34,24 @@ fun AppNavHost(
         startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onFinished = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 onStartWorkout = { workoutId -> navController.navigate(Screen.WorkoutActive.createRoute(workoutId)) },
                 onOpenChat = { navController.navigate(Screen.Chat.route) },
-                onOpenSettings = { navController.navigate(Screen.Settings.route) }
+                onOpenSettings = { navController.navigate(Screen.Settings.route) },
+                onOpenWater = { navController.navigate(Screen.Water.route) },
+                onOpenQrPass = { navController.navigate(Screen.QrPass.route) },
+                onOpenPrograms = { navController.navigate(Screen.Programs.route) }
             )
         }
 
@@ -43,20 +62,39 @@ fun AppNavHost(
             val workoutId = backStack.arguments?.getString("workoutId") ?: return@composable
             WorkoutActiveScreen(
                 workoutId = workoutId,
-                onFinished = { navController.popBackStack() }
+                onFinished = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onOpenChat = { navController.navigate(Screen.Chat.route) }
             )
+        }
+
+        composable(
+            route = Screen.WorkoutDetail.route,
+            arguments = listOf(navArgument("workoutId") { type = NavType.StringType })
+        ) { backStack ->
+            val workoutId = backStack.arguments?.getString("workoutId") ?: return@composable
+            WorkoutDetailScreen(workoutId = workoutId, onBack = { navController.popBackStack() })
         }
 
         composable(Screen.WorkoutHistory.route) {
             WorkoutHistoryScreen(
                 onWorkoutClick = { id -> navController.navigate(Screen.WorkoutDetail.createRoute(id)) },
-                onBack = { navController.popBackStack() }
+                onOpenPrograms = { navController.navigate(Screen.Programs.route) }
             )
+        }
+
+        composable(Screen.Programs.route) {
+            ProgramsScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Nutrition.route) {
             NutritionScreen(
-                onAddFood = { mealType -> navController.navigate(Screen.AddFood.createRoute(mealType)) }
+                onAddFood = { mealType -> navController.navigate(Screen.AddFood.createRoute(mealType)) },
+                onOpenWater = { navController.navigate(Screen.Water.route) }
             )
         }
 
@@ -65,14 +103,11 @@ fun AppNavHost(
             arguments = listOf(navArgument("mealType") { type = NavType.StringType })
         ) { backStack ->
             val mealType = backStack.arguments?.getString("mealType") ?: "SNACK"
-            AddFoodScreen(
-                mealType = mealType,
-                onBack = { navController.popBackStack() }
-            )
+            AddFoodScreen(mealType = mealType, onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Water.route) {
-            WaterScreen()
+            WaterScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.Chat.route) {
@@ -83,8 +118,26 @@ fun AppNavHost(
             ProgressScreen()
         }
 
+        composable(Screen.Club.route) {
+            ClubScreen(
+                onOpenQrPass = { navController.navigate(Screen.QrPass.route) },
+                onOpenChat = { navController.navigate(Screen.Chat.route) }
+            )
+        }
+
+        composable(Screen.QrPass.route) {
+            QrPassScreen(onBack = { navController.popBackStack() })
+        }
+
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onRestartOnboarding = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
