@@ -2,18 +2,25 @@ package com.fitcoach.app.workers
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.fitcoach.app.brand.BrandConfig
+import com.fitcoach.app.domain.program.ProgramCatalog
 import com.fitcoach.app.domain.repository.UserRepository
 import com.fitcoach.app.domain.repository.WorkoutRepository
+import com.fitcoach.app.domain.util.DayBounds
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 /**
  * Раз в день (около 18:00) напоминает о тренировке, если сегодня ещё не тренировался
- * и последняя тренировка была 2+ дня назад.
+ * и последняя тренировка была 2+ дня назад. Текст — со следующей тренировкой программы.
  */
 @HiltWorker
 class WorkoutReminderWorker @AssistedInject constructor(
@@ -27,18 +34,21 @@ class WorkoutReminderWorker @AssistedInject constructor(
         val profile = userRepo.getProfile() ?: return Result.success()
         if (!profile.onboardingCompleted) return Result.success()
 
-        val today = workoutRepo.getWorkoutForDate(System.currentTimeMillis())
-        if (today?.isCompleted == true) return Result.success()
+        val completed = workoutRepo.observeCompletedWorkouts().first()
+        val todayStart = DayBounds.startOfDay()
+        if (completed.any { it.date >= todayStart }) return Result.success()
 
         val twoDaysAgo = System.currentTimeMillis() - 2 * 24 * 60 * 60 * 1000L
-        val recent = workoutRepo.getRecentWorkouts(1).firstOrNull()
-        if (recent != null && recent.date > twoDaysAgo) return Result.success()
+        val last = completed.maxOfOrNull { it.date }
+        if (last != null && last > twoDaysAgo) return Result.success()
 
+        val program = ProgramCatalog.getOrDefault(profile.programKey)
+        val next = ProgramCatalog.nextWorkout(program, completed, profile.daysPerWeek)
         val name = profile.name.ifBlank { "Атлет" }
         Notifications.show(
             context, Notifications.CHANNEL_WORKOUT, ID,
             "$name, тренировка ждёт 💪",
-            "Твоя следующая тренировка готова. ${BrandConfig.clubName} ждёт тебя сегодня!"
+            "Следующая тренировка: ${next.template.title} · ${next.template.exercises.size} упражнений · ~${next.template.estimatedMinutes} мин. ${BrandConfig.clubName} ждёт тебя!"
         )
         return Result.success()
     }
