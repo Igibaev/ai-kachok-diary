@@ -9,7 +9,7 @@ import com.fitcoach.app.ai.AiMode
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.domain.model.ChatMessage
 import com.fitcoach.app.domain.model.UserProfile
-import com.fitcoach.app.domain.model.WorkoutPlan
+import com.fitcoach.app.domain.program.ProgramCatalog
 import com.fitcoach.app.domain.repository.ChatRepository
 import com.fitcoach.app.domain.repository.NutritionRepository
 import com.fitcoach.app.domain.repository.UserRepository
@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.UUID
@@ -136,9 +135,11 @@ class ChatViewModel @Inject constructor(
         val recent = workoutRepository.getRecentWorkouts(5)
         val nutrition = nutritionRepository.getNutritionSummaryForDate(now).first()
         val water = waterRepository.getTotalForDateSync(now)
-        val startDate = Instant.ofEpochMilli(profile.programStartDate).atZone(ZoneId.systemDefault()).toLocalDate()
-        val week = WorkoutPlan.getCurrentWeek(startDate)
-        val phase = WorkoutPlan.getPhaseName(profile.programKey, week)
+        val program = ProgramCatalog.getOrDefault(profile.programKey)
+        val completed = workoutRepository.observeCompletedWorkouts().first()
+        val next = ProgramCatalog.nextWorkout(program, completed, profile.daysPerWeek)
+        val week = next.weekNumber
+        val phase = next.phase.name
         return PromptContext(
             profile = profile,
             locale = locale,
@@ -147,7 +148,7 @@ class ChatViewModel @Inject constructor(
             phaseName = phase,
             todayWorkout = todayWorkout,
             todayWorkoutTitle = todayWorkout?.let { AiContextTitles.workoutTitle(it) },
-            nextWorkoutTitle = null,
+            nextWorkoutTitle = if (todayWorkout?.isCompleted == true) null else "${next.template.title} · ${next.template.exercises.size} упражнений · ~${next.template.estimatedMinutes} мин",
             recentWorkouts = recent,
             todayNutrition = nutrition,
             waterToday = water

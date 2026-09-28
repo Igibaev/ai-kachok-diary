@@ -1,28 +1,14 @@
 package com.fitcoach.app.ai
 
 import com.fitcoach.app.domain.model.Workout
-import com.fitcoach.app.domain.model.WorkoutPlan
+import com.fitcoach.app.domain.program.ProgramCatalog
+import com.fitcoach.app.domain.program.WorkoutTitles
 
-/**
- * Человеческие названия программ и тренировок для промпта.
- * Интегратор: при появлении ProgramCatalog (агент P) заменить на его данные.
- */
+/** Человеческие названия программ и тренировок для промпта — из ProgramCatalog. */
 object AiContextTitles {
 
-    fun programTitle(programKey: String): String = when (programKey) {
-        "START_3", "BEGINNER_3" -> "Старт"
-        "SLIM_3" -> "Стройность и тонус"
-        "MUSCLE_4" -> "Масса и сила"
-        else -> programKey.ifBlank { "Программа клуба" }
-    }
+    fun programTitle(programKey: String): String =
+        ProgramCatalog.get(programKey)?.title ?: ProgramCatalog.getOrDefault(programKey).title
 
-    fun workoutTitle(workout: Workout): String = when {
-        workout.planKey.startsWith("ACTIVITY_") -> when (workout.planKey.removePrefix("ACTIVITY_")) {
-            "GROUP" -> "Групповое занятие"
-            "CARDIO" -> "Кардио"
-            else -> "Другая активность"
-        }
-        else -> WorkoutPlan.getTemplate(workout.programKey, workout.planKey)?.phaseName
-            ?: workout.phaseName.ifBlank { workout.planKey }
-    }
+    fun workoutTitle(workout: Workout): String = WorkoutTitles.titleFor(workout)
 }

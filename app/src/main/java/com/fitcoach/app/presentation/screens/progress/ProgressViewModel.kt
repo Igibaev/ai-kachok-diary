@@ -9,6 +9,8 @@ import com.fitcoach.app.data.local.db.entity.BodyMeasurementEntity
 import com.fitcoach.app.domain.model.UserProfile
 import com.fitcoach.app.domain.model.Workout
 import com.fitcoach.app.domain.program.Achievements
+import com.fitcoach.app.domain.program.ProgramCatalog
+import com.fitcoach.app.domain.program.StreakCalculator
 import com.fitcoach.app.domain.repository.UserRepository
 import com.fitcoach.app.domain.repository.WorkoutRepository
 import com.fitcoach.app.domain.service.ProgressShareData
@@ -18,11 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
-import java.time.temporal.IsoFields
 import java.util.UUID
 import javax.inject.Inject
 
@@ -80,20 +79,21 @@ class ProgressViewModel @Inject constructor(
                 if (s.isDone) ((s.actualWeight ?: 0f) * (s.actualReps ?: 0)).toDouble() else 0.0
             }
         }.toInt()
-        val streak = streakWeeks(workouts.map { it.date }, zone)
+        val streak = StreakCalculator.currentStreakWeeks(workouts, profile.daysPerWeek)
         val since = LocalDate.now(zone).minusDays(90).atStartOfDay(zone).toInstant().toEpochMilli()
         val chart = measurements.filter { it.date >= since }.sortedBy { it.date }
         val start = measurements.minByOrNull { it.date }?.weightKg
         val current = measurements.maxByOrNull { it.date }?.weightKg ?: profile.weightKg
-        val startDate = Instant.ofEpochMilli(profile.programStartDate).atZone(zone).toLocalDate()
-        val week = (ChronoUnit.DAYS.between(startDate, LocalDate.now(zone)).toInt() / 7 + 1).coerceIn(1, PROGRAM_WEEKS)
+        val program = ProgramCatalog.getOrDefault(profile.programKey)
+        val programDone = ProgramCatalog.completedInProgram(program, workouts)
+        val week = ProgramCatalog.weekFor(programDone, profile.daysPerWeek)
 
         return ProgressUiState(
             profile = profile,
             completedTotal = workouts.size,
-            programCompleted = programWorkouts.count { it.programKey == profile.programKey },
-            programTotal = PROGRAM_WEEKS * profile.daysPerWeek.coerceAtLeast(1),
-            programTitle = programTitle(profile.programKey),
+            programCompleted = programDone,
+            programTotal = program.totalWeeks * profile.daysPerWeek.coerceAtLeast(1),
+            programTitle = program.title,
             weekInProgram = week,
             streakWeeks = streak,
             totalVolumeKg = volume,
@@ -103,19 +103,6 @@ class ProgressViewModel @Inject constructor(
             startWeight = start,
             currentWeight = current
         )
-    }
-
-    /** Недели подряд с хотя бы одной тренировкой, считая от текущей (или прошлой, если на этой ещё не было). */
-    private fun streakWeeks(dates: List<Long>, zone: ZoneId): Int {
-        if (dates.isEmpty()) return 0
-        val weeks = dates.map { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
-            .map { it.get(IsoFields.WEEK_BASED_YEAR) * 100 + it.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) }.toSet()
-        var cursor = LocalDate.now(zone)
-        fun key(d: LocalDate) = d.get(IsoFields.WEEK_BASED_YEAR) * 100 + d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-        if (key(cursor) !in weeks) cursor = cursor.minusWeeks(1)
-        var streak = 0
-        while (key(cursor) in weeks) { streak++; cursor = cursor.minusWeeks(1) }
-        return streak
     }
 
     fun addMeasurement(weightKg: Float, waistCm: Float?, notes: String) {
@@ -155,11 +142,6 @@ class ProgressViewModel @Inject constructor(
     companion object {
         const val PROGRAM_WEEKS = 12
 
-        fun programTitle(key: String): String = when (key) {
-            "START_3", "BEGINNER_3" -> "Старт"
-            "SLIM_3" -> "Стройность и тонус"
-            "MUSCLE_4" -> "Масса и сила"
-            else -> key.ifBlank { "Программа" }
-        }
+        fun programTitle(key: String): String = ProgramCatalog.getOrDefault(key).title
     }
 }

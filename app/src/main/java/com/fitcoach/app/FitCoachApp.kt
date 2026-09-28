@@ -3,6 +3,7 @@ package com.fitcoach.app
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.fitcoach.app.data.club.ClubNewsWorker
 import com.fitcoach.app.workers.WaterReminderWorker
 import com.fitcoach.app.workers.WorkoutReminderWorker
 import dagger.hilt.android.HiltAndroidApp
@@ -24,5 +25,6 @@ class FitCoachApp : Application(), Configuration.Provider {
         super.onCreate()
         WaterReminderWorker.schedule(this)
         WorkoutReminderWorker.schedule(this)
+        ClubNewsWorker.schedule(this)
     }
 }

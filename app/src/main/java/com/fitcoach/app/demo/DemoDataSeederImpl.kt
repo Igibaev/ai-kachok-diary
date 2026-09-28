@@ -9,6 +9,11 @@ import com.fitcoach.app.data.local.db.entity.NutritionEntryEntity
 import com.fitcoach.app.data.local.db.entity.WaterEntryEntity
 import com.fitcoach.app.domain.model.ExerciseSet
 import com.fitcoach.app.domain.model.MealType
+import com.fitcoach.app.domain.model.Restriction
+import com.fitcoach.app.domain.model.Sex
+import com.fitcoach.app.domain.program.ExerciseTemplate
+import com.fitcoach.app.domain.program.ProgramCatalog
+import com.fitcoach.app.domain.program.WorkoutTemplate
 import com.fitcoach.app.domain.model.UserProfile
 import com.fitcoach.app.domain.model.Workout
 import com.fitcoach.app.domain.repository.ChatRepository
@@ -76,61 +81,56 @@ class DemoDataSeederImpl @Inject constructor(
 
     // ---------------- тренировки ----------------
 
-    private data class DemoExercise(val id: String, val name: String, val baseKg: Float, val reps: Int, val stepKg: Float)
-    private data class DemoTemplate(val planKey: String, val title: String, val exercises: List<DemoExercise>)
-
-    private val upper = DemoTemplate("DEMO_UPPER", "Верх тела", listOf(
-        DemoExercise("demo_bench_db", "Жим гантелей лёжа", 16f, 10, 2f),
-        DemoExercise("demo_lat_pull", "Тяга верхнего блока", 35f, 12, 2.5f),
-        DemoExercise("demo_shoulder_press", "Жим гантелей сидя", 10f, 10, 1f),
-        DemoExercise("demo_row_cable", "Тяга горизонтального блока", 30f, 12, 2.5f),
-        DemoExercise("demo_curl", "Сгибание рук с гантелями", 8f, 12, 1f)
-    ))
-    private val lower = DemoTemplate("DEMO_LOWER", "Низ тела", listOf(
-        DemoExercise("demo_leg_press", "Жим ногами", 70f, 12, 5f),
-        DemoExercise("demo_rdl", "Румынская тяга с гантелями", 20f, 10, 2f),
-        DemoExercise("demo_leg_curl", "Сгибание ног лёжа", 25f, 12, 2.5f),
-        DemoExercise("demo_glute_bridge", "Ягодичный мостик", 20f, 15, 2.5f),
-        DemoExercise("demo_calf", "Подъём на носки", 30f, 15, 2.5f)
-    ))
-    private val full = DemoTemplate("DEMO_FULL", "Всё тело", listOf(
-        DemoExercise("demo_goblet_squat", "Гоблет-присед", 12f, 12, 2f),
-        DemoExercise("demo_pushup", "Отжимания", 0f, 12, 0f),
-        DemoExercise("demo_row_db", "Тяга гантели в наклоне", 12f, 12, 1f),
-        DemoExercise("demo_plank", "Планка", 0f, 1, 0f),
-        DemoExercise("demo_cable_crunch", "Скручивания на блоке", 15f, 15, 2.5f)
-    ))
+    /** Веса для демо-истории по группе мышц (кг на 1-й неделе, шаг в неделю). */
+    private fun baseWeightFor(ex: ExerciseTemplate, profile: UserProfile): Pair<Float, Float> {
+        val female = profile.sex == Sex.FEMALE
+        val hint = ex.sets.firstOrNull()?.weight.orEmpty()
+        if (hint.contains("б/в") || hint.contains("собств")) return 0f to 0f
+        val group = (ex.muscleGroup + " " + ex.name).lowercase()
+        val base = when {
+            "жим ногами" in group || "присед" in group -> if (female) 40f else 70f
+            "ног" in group || "ягод" in group || "бедр" in group || "румынск" in group || "выпад" in group -> if (female) 20f else 32f
+            "тяга верхнего" in group || "тяга горизонт" in group || "спин" in group || "тяга" in group -> if (female) 25f else 40f
+            "груд" in group || "жим" in group -> if (female) 10f else 18f
+            "плеч" in group || "разведен" in group -> if (female) 5f else 10f
+            "пресс" in group || "кор" in group || "скруч" in group -> if (female) 10f else 15f
+            "рук" in group || "бицепс" in group || "трицепс" in group || "сгибан" in group || "разгибан" in group -> if (female) 6f else 10f
+            else -> if (female) 10f else 16f
+        }
+        val step = if (base >= 40f) 5f else if (base >= 15f) 2.5f else 1f
+        return base to step
+    }
 
     private suspend fun seedWorkouts(profile: UserProfile, today: LocalDate, rnd: Random) {
-        val fourDays = profile.daysPerWeek >= 4
+        val program = ProgramCatalog.getOrDefault(profile.programKey)
+        val daysPerWeek = program.daysPerWeek
+        val fourDays = daysPerWeek >= 4
         // Смещения назад в днях; последняя тренировка — позавчера, чтобы главная показывала «следующую».
         val offsets = if (fourDays) listOf(20, 19, 17, 15, 13, 12, 10, 8, 6, 2)
         else listOf(20, 18, 16, 13, 11, 9, 6, 4, 2)
-        val order = if (fourDays) listOf(upper, lower, upper, lower) else listOf(upper, lower, full)
-        val cycle = offsets.size.coerceAtMost(9)
-        val chosen = offsets.takeLast(cycle)
 
-        chosen.forEachIndexed { index, daysAgo ->
-            val template = order[index % order.size]
-            val week = index / profile.daysPerWeek.coerceAtLeast(1) + 1
+        offsets.forEachIndexed { index, daysAgo ->
+            val next = ProgramCatalog.nextWorkout(program, index, daysPerWeek)
+            val template = ProgramCatalog.applyRestrictions(next.template, profile.restrictions)
+            val week = next.weekNumber
             val date = today.minusDays(daysAgo.toLong())
             val workoutId = UUID.randomUUID().toString()
-            val rpe = listOf(6, 7, 7, 8, 7, 8, 8, 9, 7)[index % 9]
+            val rpe = listOf(6, 7, 7, 8, 7, 8, 8, 9, 7, 8)[index % 10]
             val workout = Workout(
                 id = workoutId,
                 date = date.at(LocalTime.of(19, 0)),
-                programKey = profile.programKey,
-                planKey = template.planKey,
-                phaseName = template.title,
+                programKey = program.key,
+                planKey = template.key,
+                phaseName = template.phaseName,
                 weekNumber = week,
                 isCompleted = true,
                 durationMinutes = 44 + rnd.nextInt(0, 14),
-                painLevel = if (index == 1) 2 else 0,
+                painLevel = if (index == 1 && Restriction.BACK in profile.restrictions) 2 else 0,
                 rpe = rpe,
-                notes = if (index == chosen.lastIndex) "Отлично зашла тренировка, +2 кг в жиме" else ""
+                notes = if (index == offsets.lastIndex) "Отлично зашла тренировка, +2 кг в первом упражнении" else ""
             )
             workoutRepo.saveWorkout(workout)
-            workoutRepo.insertSets(buildSets(workoutId, template, week, rnd))
+            workoutRepo.insertSets(buildSets(workoutId, template, week, profile, rnd))
         }
 
         // Групповые занятия клуба
@@ -139,7 +139,7 @@ class DemoDataSeederImpl @Inject constructor(
                 Workout(
                     id = UUID.randomUUID().toString(),
                     date = today.minusDays(daysAgo.toLong()).at(LocalTime.of(18, 30)),
-                    programKey = profile.programKey,
+                    programKey = program.key,
                     planKey = "ACTIVITY_GROUP",
                     phaseName = "Групповое занятие · $title",
                     weekNumber = (21 - daysAgo) / 7 + 1,
@@ -153,23 +153,26 @@ class DemoDataSeederImpl @Inject constructor(
         }
     }
 
-    private fun buildSets(workoutId: String, template: DemoTemplate, week: Int, rnd: Random): List<ExerciseSet> =
+    private fun buildSets(workoutId: String, template: WorkoutTemplate, week: Int, profile: UserProfile, rnd: Random): List<ExerciseSet> =
         template.exercises.flatMap { ex ->
-            val kg = ex.baseKg + ex.stepKg * (week - 1)
-            (1..3).map { n ->
-                val actualReps = (ex.reps - (n - 1) + rnd.nextInt(-1, 2)).coerceAtLeast(if (ex.reps == 1) 1 else 6)
+            val (baseKg, stepKg) = baseWeightFor(ex, profile)
+            val kg = baseKg + stepKg * (week - 1)
+            ex.sets.mapIndexed { i, st ->
+                val n = i + 1
+                val timed = st.reps <= 1
+                val actualReps = if (timed) 1 else (st.reps - (n - 1) + rnd.nextInt(-1, 2)).coerceAtLeast(6)
                 ExerciseSet(
                     id = UUID.randomUUID().toString(),
                     workoutId = workoutId,
                     exerciseId = ex.id,
                     exerciseName = ex.name,
                     setNumber = n,
-                    targetReps = ex.reps,
-                    actualReps = if (ex.reps == 1) 1 else actualReps,
-                    targetWeight = if (kg <= 0f) "б/в" else "средний",
+                    targetReps = st.reps,
+                    actualReps = actualReps,
+                    targetWeight = st.weight,
                     actualWeight = if (kg <= 0f) null else kg,
                     isDone = true,
-                    restSeconds = 90
+                    restSeconds = ex.restSeconds
                 )
             }
         }
