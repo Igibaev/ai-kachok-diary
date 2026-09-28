@@ -89,11 +89,12 @@ fun WeightChart(points: List<WeightPoint>, targetKg: Float?, modifier: Modifier 
         }
 
         // Подписи min / max
+        val labelMaxX = maxOf(padL, padL + w - 30.dp.toPx()) // защита от узкого Canvas (coerceIn требует min <= max)
         val maxP = points.maxBy { it.weightKg }
         val minP = points.minBy { it.weightKg }
-        drawText(textMeasurer, "%.1f".format(maxP.weightKg), Offset((x(maxP.date) - 12.dp.toPx()).coerceIn(padL, padL + w - 30.dp.toPx()), y(maxP.weightKg) - 20.dp.toPx()), valueStyle)
+        drawText(textMeasurer, "%.1f".format(maxP.weightKg), Offset((x(maxP.date) - 12.dp.toPx()).coerceIn(padL, labelMaxX), y(maxP.weightKg) - 20.dp.toPx()), valueStyle)
         if (minP !== maxP) {
-            drawText(textMeasurer, "%.1f".format(minP.weightKg), Offset((x(minP.date) - 12.dp.toPx()).coerceIn(padL, padL + w - 30.dp.toPx()), y(minP.weightKg) + 6.dp.toPx()), valueStyle)
+            drawText(textMeasurer, "%.1f".format(minP.weightKg), Offset((x(minP.date) - 12.dp.toPx()).coerceIn(padL, labelMaxX), y(minP.weightKg) + 6.dp.toPx()), valueStyle)
         }
 
         // Даты по краям

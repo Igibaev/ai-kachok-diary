@@ -20,7 +20,7 @@ data class ClubContent(
 ) {
     /** Акции, срок которых не истёк на дату [today]. */
     fun activePromos(today: LocalDate = LocalDate.now()): List<Promo> =
-        promos.filter { it.isActive(today) }
+        promos.distinctBy { it.id }.filter { it.isActive(today) }
 
     /** Занятия дня недели [day] (1 = понедельник … 7 = воскресенье), отсортированные по времени. */
     fun scheduleFor(day: Int): List<ScheduleItem> =

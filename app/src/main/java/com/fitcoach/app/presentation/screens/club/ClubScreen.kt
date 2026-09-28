@@ -77,7 +77,7 @@ fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: Club
         if (content.trainers.isEmpty()) {
             item { EmptyHint("Список тренеров скоро появится. Записаться можно через WhatsApp клуба.") }
         } else {
-            items(content.trainers, key = { it.name }) { TrainerCard(it) }
+            items(content.trainers) { TrainerCard(it) }
         }
 
         item { SectionTitle("Услуги и цены") }

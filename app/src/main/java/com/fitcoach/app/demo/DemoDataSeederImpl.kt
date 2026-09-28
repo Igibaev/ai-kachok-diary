@@ -247,7 +247,7 @@ class DemoDataSeederImpl @Inject constructor(
     // ---------------- замеры ----------------
 
     private suspend fun seedMeasurements(profile: UserProfile, today: LocalDate) {
-        val current = profile.weightKg
+        val current = profile.weightKg.takeIf { it >= 30f } ?: 70f // профиль без веса → правдоподобный демо-вес
         val start = current + 1.5f
         val notes = listOf("Стартовый замер", "", "Меньше сладкого", "", "Стало легче подниматься по лестнице", "Отлично!")
         val waistStart = if (profile.sex.name == "FEMALE") 78f else 92f
