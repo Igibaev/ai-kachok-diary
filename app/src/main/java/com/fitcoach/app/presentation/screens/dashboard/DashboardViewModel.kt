@@ -57,6 +57,9 @@ class DashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(DashboardUiState())
     val state = _state.asStateFlow()
 
+    /** Защита от двойного нажатия «Начать» — иначе создаются две тренировки и два перехода. */
+    private var startingWorkout = false
+
     /** Начало текущего дня; переоценивается раз в минуту, чтобы не «застрять» на вчера после полуночи. */
     private val today = flow {
         while (true) {
@@ -108,42 +111,52 @@ class DashboardViewModel @Inject constructor(
 
     /** «Начать»/«Продолжить»: создаёт тренировку из следующего шаблона (с учётом ограничений) или открывает незавершённую. */
     fun startNextWorkout(onWorkoutReady: (String) -> Unit) {
+        if (startingWorkout) return
+        startingWorkout = true
         viewModelScope.launch {
-            val s = _state.value
-            s.inProgress?.let { onWorkoutReady(it.id); return@launch }
-
-            val profile = userRepo.getProfile() ?: return@launch
-            val program = ProgramCatalog.getOrDefault(profile.programKey)
-            val next = s.next ?: ProgramCatalog.nextWorkout(program, 0, profile.daysPerWeek)
-            val template = ProgramCatalog.applyRestrictions(next.template, profile.restrictions)
-
-            val workout = Workout(
-                id = UUID.randomUUID().toString(),
-                date = System.currentTimeMillis(),
-                programKey = program.key,
-                planKey = template.key,
-                phaseName = template.phaseName,
-                weekNumber = next.weekNumber,
-                isCompleted = false,
-                durationMinutes = null,
-                painLevel = 0,
-                rpe = 0,
-                notes = ""
-            )
-            val id = workoutRepo.saveWorkout(workout)
-            val sets = template.exercises.flatMap { ex ->
-                ex.sets.mapIndexed { i, st ->
-                    ExerciseSet(
-                        id = UUID.randomUUID().toString(), workoutId = id,
-                        exerciseId = ex.id, exerciseName = ex.name, setNumber = i + 1,
-                        targetReps = st.reps, actualReps = null, targetWeight = st.weight, actualWeight = null,
-                        isDone = false, restSeconds = ex.restSeconds
-                    )
-                }
+            try {
+                startNextWorkoutInternal(onWorkoutReady)
+            } finally {
+                startingWorkout = false
             }
-            workoutRepo.insertSets(sets)
-            onWorkoutReady(id)
         }
+    }
+
+    private suspend fun startNextWorkoutInternal(onWorkoutReady: (String) -> Unit) {
+        val s = _state.value
+        s.inProgress?.let { onWorkoutReady(it.id); return }
+
+        val profile = userRepo.getProfile() ?: return
+        val program = ProgramCatalog.getOrDefault(profile.programKey)
+        val next = s.next ?: ProgramCatalog.nextWorkout(program, 0, profile.daysPerWeek)
+        val template = ProgramCatalog.applyRestrictions(next.template, profile.restrictions)
+
+        val workout = Workout(
+            id = UUID.randomUUID().toString(),
+            date = System.currentTimeMillis(),
+            programKey = program.key,
+            planKey = template.key,
+            phaseName = template.phaseName,
+            weekNumber = next.weekNumber,
+            isCompleted = false,
+            durationMinutes = null,
+            painLevel = 0,
+            rpe = 0,
+            notes = ""
+        )
+        val id = workoutRepo.saveWorkout(workout)
+        val sets = template.exercises.flatMap { ex ->
+            ex.sets.mapIndexed { i, st ->
+                ExerciseSet(
+                    id = UUID.randomUUID().toString(), workoutId = id,
+                    exerciseId = ex.id, exerciseName = ex.name, setNumber = i + 1,
+                    targetReps = st.reps, actualReps = null, targetWeight = st.weight, actualWeight = null,
+                    isDone = false, restSeconds = ex.restSeconds
+                )
+            }
+        }
+        workoutRepo.insertSets(sets)
+        onWorkoutReady(id)
     }
 
     /** «Отметить активность»: групповое / кардио / другое, сразу как выполненная. */

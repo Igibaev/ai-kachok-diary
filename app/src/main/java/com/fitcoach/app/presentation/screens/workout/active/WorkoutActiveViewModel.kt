@@ -109,6 +109,10 @@ class WorkoutActiveViewModel @Inject constructor(
     private var template: WorkoutTemplate? = null
     private var profile: UserProfile = UserProfile()
 
+    /** «Прошлый раз» по exerciseId: запрашиваем один раз, иначе после первого подхода в этой тренировке
+     *  последним «выполненным» становится наш же подход и подсказка пропадает. */
+    private val lastResultCache = HashMap<String, ExerciseSet?>()
+
     init {
         loadWorkout()
         startElapsedTimer()
@@ -186,7 +190,9 @@ class WorkoutActiveViewModel @Inject constructor(
 
     fun openSetInput(set: ExerciseSet) {
         viewModelScope.launch {
-            val last = workoutRepo.getLastResultForExercise(set.exerciseId)?.takeIf { it.workoutId != workoutId }
+            val last = lastResultCache.getOrPut(set.exerciseId) {
+                workoutRepo.getLastResultForExercise(set.exerciseId)?.takeIf { it.workoutId != workoutId }
+            }
             // Если в этой тренировке уже есть выполненный подход этого упражнения — берём его вес.
             val inWorkout = _state.value.exercises.firstOrNull { it.exerciseId == set.exerciseId }
                 ?.sets?.lastOrNull { it.isDone && it.actualWeight != null }

@@ -102,10 +102,11 @@ private suspend fun signalRestOver(context: Context) {
         }
         vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250), -1))
     }
-    runCatching {
-        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+    val tone = runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80) }.getOrNull() ?: return
+    try {
         tone.startTone(ToneGenerator.TONE_PROP_BEEP2, 350)
         delay(450)
+    } finally {
         tone.release()
     }
 }
