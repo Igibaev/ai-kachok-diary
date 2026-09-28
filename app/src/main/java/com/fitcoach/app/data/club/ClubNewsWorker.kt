@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.fitcoach.app.R
 import com.fitcoach.app.workers.Notifications
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -29,8 +30,8 @@ class ClubNewsWorker @AssistedInject constructor(
                 context,
                 Notifications.CHANNEL_CLUB,
                 ID_BASE + index,
-                "Новая акция: ${promo.title}",
-                promo.text.ifBlank { "Подробности во вкладке «Клуб»" }
+                context.getString(R.string.notif_promo_title, promo.title),
+                promo.text.ifBlank { context.getString(R.string.notif_promo_text) }
             )
         }
         return Result.success()

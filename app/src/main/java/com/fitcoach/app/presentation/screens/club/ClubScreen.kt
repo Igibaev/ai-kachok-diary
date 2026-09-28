@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,10 +38,11 @@ import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.data.club.ClubService
 import com.fitcoach.app.data.club.ScheduleItem
 import com.fitcoach.app.data.club.Trainer
+import com.fitcoach.app.l10n.DomainTranslations
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.theme.FitCoachColors
-
-private val dayNames = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+import java.time.DayOfWeek
+import java.time.format.TextStyle
 
 @Composable
 fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: ClubViewModel = hiltViewModel()) {
@@ -55,11 +57,11 @@ fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: Club
     ) {
         item { ClubHero() }
         item { ActionRow() }
-        item { BookTrainerCard(onClick = { ClubLinks.whatsapp(context, ClubLinks.bookTrainerText(null)) }) }
+        item { BookTrainerCard(onClick = { ClubLinks.whatsapp(context, ClubLinks.bookTrainerText(context, null)) }) }
 
-        item { SectionTitle("Акции") }
+        item { SectionTitle(stringResource(R.string.club_promos)) }
         if (state.activePromos.isEmpty()) {
-            item { EmptyHint("Сейчас акций нет — следите за новостями клуба.") }
+            item { EmptyHint(stringResource(R.string.club_promos_empty)) }
         } else {
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -70,19 +72,19 @@ fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: Club
             }
         }
 
-        item { SectionTitle("Расписание групповых") }
+        item { SectionTitle(stringResource(R.string.club_schedule)) }
         item { ScheduleCard(content.schedule, state.today) }
 
-        item { SectionTitle("Тренеры") }
+        item { SectionTitle(stringResource(R.string.club_trainers)) }
         if (content.trainers.isEmpty()) {
-            item { EmptyHint("Список тренеров скоро появится. Записаться можно через WhatsApp клуба.") }
+            item { EmptyHint(stringResource(R.string.club_trainers_empty)) }
         } else {
             items(content.trainers) { TrainerCard(it) }
         }
 
-        item { SectionTitle("Услуги и цены") }
+        item { SectionTitle(stringResource(R.string.club_services)) }
         if (content.services.isEmpty()) {
-            item { EmptyHint("Актуальные цены уточняйте на ресепшене или в WhatsApp.") }
+            item { EmptyHint(stringResource(R.string.club_services_empty)) }
         } else {
             item { ServicesCard(content.services) }
         }
@@ -101,7 +103,7 @@ fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: Club
                 ) {
                     Icon(Icons.Default.QrCode2, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Карта участника", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.club_member_card), fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(
                     onClick = onOpenChat,
@@ -112,7 +114,7 @@ fun ClubScreen(onOpenQrPass: () -> Unit, onOpenChat: () -> Unit, viewModel: Club
                 ) {
                     Icon(Icons.Default.SmartToy, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("AI-тренер", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.club_ai_coach), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -150,10 +152,11 @@ private fun ClubHero() {
 @Composable
 private fun ActionRow() {
     val context = LocalContext.current
+    val callLabel = stringResource(R.string.club_call)
     val actions = buildList {
-        if (BrandConfig.hasPhone) add(Triple(Icons.Default.Call, "Позвонить") { ClubLinks.dial(context) })
+        if (BrandConfig.hasPhone) add(Triple(Icons.Default.Call, callLabel) { ClubLinks.dial(context) })
         if (BrandConfig.hasWhatsapp) add(Triple(Icons.AutoMirrored.Filled.Chat, "WhatsApp") {
-            ClubLinks.whatsapp(context, "Здравствуйте! Пишу из приложения ${BrandConfig.appName}.")
+            ClubLinks.whatsapp(context, ClubLinks.greetingText(context))
         })
         if (BrandConfig.hasInstagram) add(Triple(Icons.Default.CameraAlt, "Instagram") { ClubLinks.instagram(context) })
         if (BrandConfig.hasMap) add(Triple(Icons.Default.Place, "2GIS") { ClubLinks.map(context) })
@@ -175,8 +178,8 @@ private fun BookTrainerCard(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Записаться к тренеру", fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = FitCoachColors.AccentOn)
-            Text("Напишем в WhatsApp клуба — ответ в рабочее время", fontSize = 12.sp, color = FitCoachColors.AccentOn.copy(alpha = 0.75f))
+            Text(stringResource(R.string.club_book_trainer), fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = FitCoachColors.AccentOn)
+            Text(stringResource(R.string.club_book_trainer_hint), fontSize = 12.sp, color = FitCoachColors.AccentOn.copy(alpha = 0.75f))
         }
         Icon(Icons.AutoMirrored.Filled.Chat, null, tint = FitCoachColors.AccentOn)
     }
@@ -186,9 +189,10 @@ private fun BookTrainerCard(onClick: () -> Unit) {
 private fun ScheduleCard(schedule: List<ScheduleItem>, today: Int) {
     FitCard {
         if (schedule.isEmpty()) {
-            EmptyHint("Расписание групповых занятий уточняйте на ресепшене.")
+            EmptyHint(stringResource(R.string.club_schedule_empty))
             return@FitCard
         }
+        val locale = DomainTranslations.currentLocale()
         val ordered = (today..7) + (1 until today)
         ordered.forEachIndexed { index, day ->
             val items = schedule.filter { it.day == day }.sortedBy { it.time }
@@ -197,11 +201,11 @@ private fun ScheduleCard(schedule: List<ScheduleItem>, today: Int) {
             if (index > 0) HorizontalDivider(color = FitCoachColors.Border, modifier = Modifier.padding(vertical = 8.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    dayNames.getOrElse(day - 1) { "$day" },
+                    runCatching { DayOfWeek.of(day).getDisplayName(TextStyle.SHORT, locale).replaceFirstChar { it.uppercase() } }.getOrDefault("$day"),
                     fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     color = if (isToday) FitCoachColors.Accent else FitCoachColors.TextSecondary
                 )
-                if (isToday) SmallChip("Сегодня", color = FitCoachColors.AccentOn, background = FitCoachColors.Accent)
+                if (isToday) SmallChip(stringResource(R.string.club_today), color = FitCoachColors.AccentOn, background = FitCoachColors.Accent)
             }
             Spacer(Modifier.height(4.dp))
             items.forEach { item ->
@@ -209,7 +213,7 @@ private fun ScheduleCard(schedule: List<ScheduleItem>, today: Int) {
                     Text(item.time, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isToday) FitCoachColors.TextPrimary else FitCoachColors.TextSecondary, modifier = Modifier.width(48.dp))
                     Column(Modifier.weight(1f)) {
                         Text(item.title, fontSize = 14.sp, color = FitCoachColors.TextPrimary, fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal)
-                        val sub = listOfNotNull(item.trainer, "${item.durationMin} мин").joinToString(" · ")
+                        val sub = listOfNotNull(item.trainer, stringResource(R.string.format_minutes, item.durationMin)).joinToString(" · ")
                         Text(sub, fontSize = 11.sp, color = FitCoachColors.TextMuted)
                     }
                 }
@@ -244,8 +248,8 @@ private fun TrainerCard(trainer: Trainer) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val wa = trainer.whatsappDigits.ifBlank { BrandConfig.clubWhatsapp }
             if (wa.isNotBlank()) {
-                SmallChip("Записаться", color = FitCoachColors.AccentOn, background = FitCoachColors.Accent) {
-                    ClubLinks.whatsapp(context, ClubLinks.bookTrainerText(trainer.name), wa)
+                SmallChip(stringResource(R.string.club_book), color = FitCoachColors.AccentOn, background = FitCoachColors.Accent) {
+                    ClubLinks.whatsapp(context, ClubLinks.bookTrainerText(context, trainer.name), wa)
                 }
             }
             if (trainer.instagramHandle.isNotBlank()) {
@@ -265,7 +269,7 @@ private fun ServicesCard(services: List<ClubService>) {
             if (index > 0) HorizontalDivider(color = FitCoachColors.Border, modifier = Modifier.padding(vertical = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth().clickable(enabled = BrandConfig.hasWhatsapp) {
-                    ClubLinks.whatsapp(context, ClubLinks.bookServiceText(s.title))
+                    ClubLinks.whatsapp(context, ClubLinks.bookServiceText(context, s.title))
                 },
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -273,7 +277,7 @@ private fun ServicesCard(services: List<ClubService>) {
                     Text(s.title, fontSize = 14.sp, color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Medium)
                     s.description?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp, color = FitCoachColors.TextMuted) }
                 }
-                Text(s.priceLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
+                Text(servicePriceLabel(s), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
             }
         }
     }
@@ -282,7 +286,7 @@ private fun ServicesCard(services: List<ClubService>) {
 @Composable
 private fun ReferralCard(code: String, text: String) {
     FitCard {
-        Text("ПРИВЕДИ ДРУГА", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+        Text(stringResource(R.string.club_referral), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
@@ -291,7 +295,7 @@ private fun ReferralCard(code: String, text: String) {
             ) {
                 Text(code, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, color = FitCoachColors.Accent, letterSpacing = 2.sp)
             }
-            Text(text.ifBlank { "Покажите код на ресепшене вместе с другом." }, fontSize = 12.sp, color = FitCoachColors.TextSecondary, modifier = Modifier.weight(1f))
+            Text(text.ifBlank { stringResource(R.string.club_referral_default) }, fontSize = 12.sp, color = FitCoachColors.TextSecondary, modifier = Modifier.weight(1f))
         }
     }
 }

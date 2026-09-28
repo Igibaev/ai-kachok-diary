@@ -9,12 +9,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import java.time.Instant
 import java.time.ZoneId
@@ -30,6 +32,7 @@ data class WeightPoint(val date: Long, val weightKg: Float)
 @Composable
 fun WeightChart(points: List<WeightPoint>, targetKg: Float?, modifier: Modifier = Modifier) {
     val textMeasurer = rememberTextMeasurer()
+    val targetLabel = targetKg?.let { stringResource(R.string.progress_chart_target, it.toString()) } ?: ""
     val labelStyle = TextStyle(fontSize = 10.sp, color = FitCoachColors.TextMuted)
     val valueStyle = TextStyle(fontSize = 11.sp, color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold)
     val dateFmt = DateTimeFormatter.ofPattern("dd.MM")
@@ -67,7 +70,7 @@ fun WeightChart(points: List<WeightPoint>, targetKg: Float?, modifier: Modifier 
                 FitCoachColors.Success.copy(alpha = 0.7f), Offset(padL, ty), Offset(padL + w, ty), strokeWidth = 2f,
                 pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
             )
-            drawText(textMeasurer, "цель $t", Offset(padL + w - 60.dp.toPx(), ty - 14.dp.toPx()), TextStyle(fontSize = 10.sp, color = FitCoachColors.Success))
+            drawText(textMeasurer, targetLabel, Offset(padL + w - 60.dp.toPx(), ty - 14.dp.toPx()), TextStyle(fontSize = 10.sp, color = FitCoachColors.Success))
         }
 
         // Линия и заливка

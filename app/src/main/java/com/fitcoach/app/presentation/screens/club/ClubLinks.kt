@@ -3,6 +3,7 @@ package com.fitcoach.app.presentation.screens.club
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 
 /** Открытие внешних ссылок клуба (WhatsApp, Instagram, карта, звонок) без падений, если приложения нет. */
@@ -35,15 +36,16 @@ object ClubLinks {
 
     fun map(context: Context) = open(context, BrandConfig.clubMapUrl)
 
-    /** Лид с меткой «из приложения»: тренер сразу видит источник заявки. */
-    fun bookTrainerText(trainerName: String?): String {
-        val to = if (trainerName.isNullOrBlank()) "тренеру" else "тренеру $trainerName"
-        return "Здравствуйте! Пишу из приложения ${BrandConfig.appName}. Хочу записаться на тренировку к $to. Когда есть свободное время?"
-    }
+    /** Лид с меткой «из приложения»: тренер сразу видит источник заявки. Текст — на языке приложения. */
+    fun bookTrainerText(context: Context, trainerName: String?): String =
+        if (trainerName.isNullOrBlank()) context.getString(R.string.club_book_trainer_text, BrandConfig.appName)
+        else context.getString(R.string.club_book_trainer_named_text, BrandConfig.appName, trainerName)
 
-    fun bookServiceText(service: String): String =
-        "Здравствуйте! Пишу из приложения ${BrandConfig.appName}. Интересует «$service». Расскажите, пожалуйста, подробнее."
+    fun bookServiceText(context: Context, service: String): String =
+        context.getString(R.string.club_book_service_text, BrandConfig.appName, service)
 
-    fun promoText(promoTitle: String): String =
-        "Здравствуйте! Пишу из приложения ${BrandConfig.appName}. Хочу воспользоваться акцией «$promoTitle»."
+    fun promoText(context: Context, promoTitle: String): String =
+        context.getString(R.string.club_promo_text, BrandConfig.appName, promoTitle)
+
+    fun greetingText(context: Context): String = context.getString(R.string.club_whatsapp_greeting, BrandConfig.appName)
 }

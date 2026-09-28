@@ -19,12 +19,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
+import com.fitcoach.app.data.club.ClubService
 import com.fitcoach.app.data.club.Promo
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import java.time.format.DateTimeFormatter
@@ -37,7 +40,7 @@ fun PromoBanner(modifier: Modifier = Modifier, viewModel: PromoBannerViewModel =
     val context = LocalContext.current
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            "АКЦИИ КЛУБА",
+            stringResource(R.string.club_promos_banner),
             style = MaterialTheme.typography.labelSmall,
             color = FitCoachColors.TextMuted,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -70,9 +73,9 @@ fun PromoCard(promo: Promo, modifier: Modifier = Modifier, onClick: () -> Unit) 
             Text(promo.text, fontSize = 12.sp, color = FitCoachColors.TextSecondary, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(promo.ctaText ?: "Подробнее", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
+            Text(promo.ctaText ?: stringResource(R.string.club_promo_more), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
             promo.validUntilDate()?.let {
-                Text("до ${it.format(DateTimeFormatter.ofPattern("dd.MM"))}", fontSize = 11.sp, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.club_promo_until, it.format(DateTimeFormatter.ofPattern("dd.MM"))), fontSize = 11.sp, color = FitCoachColors.TextMuted)
             }
         }
     }
@@ -81,7 +84,7 @@ fun PromoCard(promo: Promo, modifier: Modifier = Modifier, onClick: () -> Unit) 
 internal fun openPromo(context: android.content.Context, promo: Promo) {
     val url = promo.ctaUrl
     if (!url.isNullOrBlank()) ClubLinks.open(context, url)
-    else if (BrandConfig.hasWhatsapp) ClubLinks.whatsapp(context, ClubLinks.promoText(promo.title))
+    else if (BrandConfig.hasWhatsapp) ClubLinks.whatsapp(context, ClubLinks.promoText(context, promo.title))
     else ClubLinks.dial(context)
 }
 
@@ -125,6 +128,14 @@ fun SmallChip(text: String, color: Color = FitCoachColors.TextSecondary, backgro
     ) {
         Text(text, fontSize = 11.sp, color = color, fontWeight = FontWeight.Medium)
     }
+}
+
+/** «25 000 ₸ / мес» — локализованный формат цены (модель хранит только число и единицу). */
+@Composable
+fun servicePriceLabel(service: ClubService): String {
+    val digits = "%,d".format(service.price).replace(',', ' ')
+    val base = if (service.price <= 0) stringResource(R.string.club_price_free) else stringResource(R.string.club_price_tenge, digits)
+    return if (service.unit.isBlank() || service.price <= 0) base else "$base / ${service.unit}"
 }
 
 @Composable

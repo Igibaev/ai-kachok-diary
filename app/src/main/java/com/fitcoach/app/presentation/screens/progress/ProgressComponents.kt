@@ -14,14 +14,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.data.local.db.entity.BodyMeasurementEntity
 import com.fitcoach.app.domain.program.Achievements
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import java.time.Instant
 import java.time.ZoneId
@@ -53,8 +56,8 @@ fun BadgesGrid(all: List<Achievements.Badge>, earned: List<Achievements.Badge>) 
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(badge.emoji, fontSize = 24.sp)
-                    Text(badge.title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.TextPrimary, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(badge.description, fontSize = 9.sp, color = FitCoachColors.TextMuted, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(badge.title.tr(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.TextPrimary, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(badge.description.tr(), fontSize = 9.sp, color = FitCoachColors.TextMuted, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -69,13 +72,13 @@ fun MeasurementRow(m: BodyMeasurementEntity, onDelete: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(Instant.ofEpochMilli(m.date).atZone(ZoneId.systemDefault()).toLocalDate().format(fmt), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
-                Text("%.1f кг".format(m.weightKg), fontSize = 14.sp, color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold)
-                m.waistCm?.let { Text("талия %.0f см".format(it), fontSize = 11.sp, color = FitCoachColors.TextMuted) }
+                Text(stringResource(R.string.progress_measurement_weight, "%.1f".format(m.weightKg)), fontSize = 14.sp, color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold)
+                m.waistCm?.let { Text(stringResource(R.string.progress_measurement_waist, it.toInt()), fontSize = 11.sp, color = FitCoachColors.TextMuted) }
             }
             if (m.notes.isNotBlank()) Text(m.notes, fontSize = 11.sp, color = FitCoachColors.TextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Close, contentDescription = "Удалить замер", tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.progress_delete_measurement), tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -96,24 +99,24 @@ fun AddMeasurementDialog(defaultWeight: Float?, onDismiss: () -> Unit, onAdd: (F
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = FitCoachColors.Card,
-        title = { Text("Новый замер", color = FitCoachColors.TextPrimary) },
+        title = { Text(stringResource(R.string.progress_new_measurement), color = FitCoachColors.TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = weight, onValueChange = { weight = it }, singleLine = true,
-                    label = { Text("Вес, кг", color = FitCoachColors.TextMuted) },
+                    label = { Text(stringResource(R.string.progress_field_weight), color = FitCoachColors.TextMuted) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), colors = fieldColors
                 )
                 OutlinedTextField(
                     value = waist, onValueChange = { waist = it }, singleLine = true,
-                    label = { Text("Талия, см (необязательно)", color = FitCoachColors.TextMuted) },
+                    label = { Text(stringResource(R.string.progress_field_waist), color = FitCoachColors.TextMuted) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(), colors = fieldColors
                 )
                 OutlinedTextField(
                     value = notes, onValueChange = { notes = it },
-                    label = { Text("Заметка", color = FitCoachColors.TextMuted) },
+                    label = { Text(stringResource(R.string.progress_field_notes), color = FitCoachColors.TextMuted) },
                     modifier = Modifier.fillMaxWidth(), colors = fieldColors
                 )
             }
@@ -123,8 +126,8 @@ fun AddMeasurementDialog(defaultWeight: Float?, onDismiss: () -> Unit, onAdd: (F
                 onClick = { parsedWeight?.let { onAdd(it, waist.replace(',', '.').toFloatOrNull(), notes.trim()) } },
                 enabled = parsedWeight != null && parsedWeight in 30f..300f,
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn)
-            ) { Text("Сохранить", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(R.string.common_save), fontWeight = FontWeight.Bold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = FitCoachColors.TextMuted) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
     )
 }

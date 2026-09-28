@@ -44,24 +44,24 @@ class ShareCardRenderer(private val context: Context) {
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bitmap)
         drawBackground(c)
-        drawHeader(c, data.userName.ifBlank { "Тренировка выполнена" }, "ТРЕНИРОВКА ЗАВЕРШЕНА")
+        drawHeader(c, data.userName.ifBlank { str(R.string.share_workout_done) }, str(R.string.share_workout_label))
 
         // Заголовок тренировки
-        val title = data.workoutTitle.ifBlank { "Тренировка" }
+        val title = data.workoutTitle.ifBlank { str(R.string.share_workout_default_title) }
         drawWrapped(c, title, 80f, 640f, 1000f, paint(textPrimary, 84f, bold = true), 96f, maxLines = 2)
 
         // Сетка цифр 2×2
         val stats = listOf(
-            "${data.doneSets}" to "подходов",
-            "${data.durationMinutes}" to "минут",
-            formatVolume(data.volumeKg) to "кг объём",
-            "${data.streakWorkouts}" to "тренировок подряд"
+            "${data.doneSets}" to str(R.string.share_sets),
+            "${data.durationMinutes}" to str(R.string.share_minutes),
+            formatVolume(data.volumeKg) to str(R.string.share_volume),
+            "${data.streakWorkouts}" to str(R.string.share_streak)
         )
         drawStatsGrid(c, stats, top = 880f)
 
         var y = 1420f
         if (data.personalRecords > 0) {
-            drawPill(c, "🏆 Новых рекордов: ${data.personalRecords}", y, accent, accentOn)
+            drawPill(c, str(R.string.share_records, data.personalRecords), y, accent, accentOn)
             y += 130f
         }
         drawFooter(c, branding, y)
@@ -72,21 +72,21 @@ class ShareCardRenderer(private val context: Context) {
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bitmap)
         drawBackground(c)
-        drawHeader(c, data.userName.ifBlank { "Мой прогресс" }, "МОЙ ПРОГРЕСС")
+        drawHeader(c, data.userName.ifBlank { str(R.string.share_progress_title) }, str(R.string.share_progress_label))
 
         val diff = data.currentWeightKg - data.startWeightKg
-        val diffText = (if (diff <= 0) "−" else "+") + "%.1f кг".format(kotlin.math.abs(diff))
-        drawWrapped(c, "Неделя ${data.weeksInProgram.coerceAtLeast(1)} в программе", 80f, 640f, 1000f, paint(textPrimary, 76f, bold = true), 90f, maxLines = 2)
+        val diffText = (if (diff <= 0) "−" else "+") + str(R.string.format_kg, "%.1f".format(kotlin.math.abs(diff)))
+        drawWrapped(c, str(R.string.share_week_in_program, data.weeksInProgram.coerceAtLeast(1)), 80f, 640f, 1000f, paint(textPrimary, 76f, bold = true), 90f, maxLines = 2)
 
         // Крупная разница веса
         c.drawText(diffText, 80f, 900f, paint(accent, 190f, bold = true))
-        c.drawText("изменение веса", 80f, 970f, paint(textSecondary, 40f))
+        c.drawText(str(R.string.share_weight_change), 80f, 970f, paint(textSecondary, 40f))
 
         val stats = listOf(
-            "%.1f".format(data.startWeightKg) to "кг старт",
-            "%.1f".format(data.currentWeightKg) to "кг сейчас",
-            "${data.workoutsCompleted}" to "тренировок",
-            "${data.weeksInProgram}" to "недель"
+            "%.1f".format(data.startWeightKg) to str(R.string.share_kg_start),
+            "%.1f".format(data.currentWeightKg) to str(R.string.share_kg_now),
+            "${data.workoutsCompleted}" to str(R.string.share_workouts),
+            "${data.weeksInProgram}" to str(R.string.share_weeks)
         )
         drawStatsGrid(c, stats, top = 1040f)
         drawFooter(c, branding, 1560f)
@@ -157,7 +157,7 @@ class ShareCardRenderer(private val context: Context) {
             val rect = RectF(80f, y, w - 80f, y + 150f)
             c.drawRoundRect(rect, 32f, 32f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = withAlpha(accent, 0x2A) })
             c.drawRoundRect(rect, 32f, 32f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent; style = Paint.Style.STROKE; strokeWidth = 3f })
-            c.drawText("Приведи друга — скидка по коду", 120f, y + 60f, paint(textSecondary, 34f))
+            c.drawText(str(R.string.share_referral), 120f, y + 60f, paint(textSecondary, 34f))
             c.drawText(branding.referralCode, 120f, y + 122f, paint(accent, 60f, bold = true).apply { letterSpacing = 0.12f })
             y += 190f
         }
@@ -197,7 +197,10 @@ class ShareCardRenderer(private val context: Context) {
     }
 
     private fun formatVolume(kg: Int): String =
-        if (kg >= 10_000) "${(kg / 1000f * 10).roundToInt() / 10f} т".replace(".0 т", " т") else kg.toString()
+        if (kg >= 10_000) str(R.string.share_tons, ((kg / 1000f * 10).roundToInt() / 10f).toString().removeSuffix(".0")) else kg.toString()
+
+    /** Строки карточки — на языке приложения (контекст с локалью задаёт ShareServiceImpl). */
+    private fun str(resId: Int, vararg args: Any): String = context.getString(resId, *args)
 
     private fun withAlpha(color: Int, alpha: Int) = Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
 }

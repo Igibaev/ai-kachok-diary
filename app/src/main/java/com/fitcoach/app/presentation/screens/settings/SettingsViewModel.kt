@@ -1,6 +1,8 @@
 package com.fitcoach.app.presentation.screens.settings
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
+import com.fitcoach.app.R
 import androidx.lifecycle.viewModelScope
 import com.fitcoach.app.domain.model.Goal
 import com.fitcoach.app.domain.model.Level
@@ -64,11 +66,14 @@ data class SettingsForm(
     )
 }
 
+/** Сообщение для снекбара: ресурс + необязательный аргумент (текст ошибки). */
+data class UiMessage(@StringRes val textRes: Int, val arg: String? = null)
+
 data class SettingsUiState(
     val form: SettingsForm = SettingsForm(),
     val loaded: Boolean = false,
     val busy: Boolean = false,
-    val message: String? = null
+    val message: UiMessage? = null
 )
 
 @HiltViewModel
@@ -114,18 +119,18 @@ class SettingsViewModel @Inject constructor(
                 carbsGoal = goals.carbsG.toString(), fatGoal = goals.fatG.toString(), waterGoal = goals.waterMl.toString()
             )
         }
-        _state.update { it.copy(message = "Цели пересчитаны — не забудь сохранить") }
+        _state.update { it.copy(message = UiMessage(R.string.settings_msg_recalculated)) }
     }
 
     fun save() = viewModelScope.launch {
         val base = userRepo.getProfile() ?: UserProfile()
         userRepo.saveProfile(_state.value.form.applyTo(base))
-        _state.update { it.copy(message = "Сохранено") }
+        _state.update { it.copy(message = UiMessage(R.string.settings_msg_saved)) }
     }
 
-    fun seedDemo() = runBusy("Демо-данные загружены: 3 недели истории") { demoSeeder.seedThreeWeeks() }
+    fun seedDemo() = runBusy(R.string.settings_msg_demo_loaded) { demoSeeder.seedThreeWeeks() }
 
-    fun clearAll() = runBusy("Все данные очищены") { demoSeeder.clearAllUserData() }
+    fun clearAll() = runBusy(R.string.settings_msg_cleared) { demoSeeder.clearAllUserData() }
 
     fun restartOnboarding(onDone: () -> Unit) = viewModelScope.launch {
         val p = userRepo.getProfile() ?: UserProfile()
@@ -135,11 +140,15 @@ class SettingsViewModel @Inject constructor(
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 
-    private fun runBusy(successMessage: String, block: suspend () -> Unit) = viewModelScope.launch {
+    private fun runBusy(@StringRes successMessage: Int, block: suspend () -> Unit) = viewModelScope.launch {
         _state.update { it.copy(busy = true) }
         val result = runCatching { block() }
         _state.update {
-            it.copy(busy = false, message = if (result.isSuccess) successMessage else "Не удалось: ${result.exceptionOrNull()?.message ?: "ошибка"}")
+            it.copy(
+                busy = false,
+                message = if (result.isSuccess) UiMessage(successMessage)
+                else UiMessage(R.string.settings_msg_failed, result.exceptionOrNull()?.message)
+            )
         }
     }
 }

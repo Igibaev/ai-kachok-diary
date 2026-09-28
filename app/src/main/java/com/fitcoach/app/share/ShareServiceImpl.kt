@@ -7,11 +7,14 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.FileProvider
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.data.club.ClubRepository
 import com.fitcoach.app.domain.service.ProgressShareData
 import com.fitcoach.app.domain.service.ShareService
 import com.fitcoach.app.domain.service.WorkoutShareData
+import com.fitcoach.app.l10n.DomainTranslations
+import com.fitcoach.app.l10n.withLanguage
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -30,16 +33,19 @@ class ShareServiceImpl @Inject constructor(
     private val clubRepository: ClubRepository
 ) : ShareService {
 
-    private val renderer by lazy { ShareCardRenderer(appContext) }
+    /** Рендерер создаётся на каждый вызов с контекстом на текущем языке приложения — подписи карточки локализованы. */
+    private fun renderer() = ShareCardRenderer(appContext.withLanguage(DomainTranslations.currentLanguage()))
 
     override suspend fun shareWorkoutCard(context: Context, data: WorkoutShareData): Result<Unit> = runCatching {
         val branding = branding(data.referralCode)
+        val renderer = renderer()
         val bitmap = withContext(Dispatchers.Default) { renderer.renderWorkout(data, branding) }
         share(context, bitmap, "workout")
     }
 
     override suspend fun shareProgressCard(context: Context, data: ProgressShareData): Result<Unit> = runCatching {
         val branding = branding(data.referralCode)
+        val renderer = renderer()
         val bitmap = withContext(Dispatchers.Default) { renderer.renderProgress(data, branding) }
         share(context, bitmap, "progress")
     }
@@ -89,7 +95,7 @@ class ShareServiceImpl @Inject constructor(
             putExtra(Intent.EXTRA_TEXT, "${BrandConfig.clubName} · ${BrandConfig.appName}")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(send, "Поделиться результатом").apply {
+        val chooser = Intent.createChooser(send, context.getString(R.string.share_chooser)).apply {
             if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)

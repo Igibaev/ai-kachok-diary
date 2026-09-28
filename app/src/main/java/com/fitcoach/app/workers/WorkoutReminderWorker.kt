@@ -7,11 +7,14 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.domain.program.ProgramCatalog
 import com.fitcoach.app.domain.repository.UserRepository
 import com.fitcoach.app.domain.repository.WorkoutRepository
 import com.fitcoach.app.domain.util.DayBounds
+import com.fitcoach.app.l10n.tr
+import com.fitcoach.app.l10n.withLanguage
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -44,11 +47,19 @@ class WorkoutReminderWorker @AssistedInject constructor(
 
         val program = ProgramCatalog.getOrDefault(profile.programKey)
         val next = ProgramCatalog.nextWorkout(program, completed, profile.daysPerWeek)
-        val name = profile.name.ifBlank { "Атлет" }
+        val res = context.withLanguage(profile.language)
+        val name = profile.name.ifBlank { res.getString(R.string.dashboard_default_name) }
+        val exercises = next.template.exercises.size
         Notifications.show(
             context, Notifications.CHANNEL_WORKOUT, ID,
-            "$name, тренировка ждёт 💪",
-            "Следующая тренировка: ${next.template.title} · ${next.template.exercises.size} упражнений · ~${next.template.estimatedMinutes} мин. ${BrandConfig.clubName} ждёт тебя!"
+            res.getString(R.string.notif_workout_title, name),
+            res.getString(
+                R.string.notif_workout_text,
+                next.template.title.tr(profile.language),
+                res.resources.getQuantityString(R.plurals.plural_exercises, exercises, exercises),
+                next.template.estimatedMinutes,
+                BrandConfig.clubName
+            )
         )
         return Result.success()
     }

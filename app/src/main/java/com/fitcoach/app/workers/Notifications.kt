@@ -28,7 +28,7 @@ object Notifications {
             NotificationChannel(CHANNEL_WORKOUT, context.getString(R.string.notification_channel_workout), NotificationManager.IMPORTANCE_DEFAULT)
         )
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_CLUB, "Новости клуба", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL_CLUB, context.getString(R.string.notification_channel_club), NotificationManager.IMPORTANCE_DEFAULT)
         )
     }
 

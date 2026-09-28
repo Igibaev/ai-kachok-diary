@@ -46,11 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
+import com.fitcoach.app.R
 import com.fitcoach.app.ai.AiMode
 import com.fitcoach.app.presentation.theme.FitCoachColors
 
@@ -76,15 +78,15 @@ fun ChatScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             containerColor = FitCoachColors.Card,
-            title = { Text("Очистить историю?", color = FitCoachColors.TextPrimary) },
-            text = { Text("Все сообщения в чате будут удалены.", color = FitCoachColors.TextSecondary) },
+            title = { Text(stringResource(R.string.chat_clear_title), color = FitCoachColors.TextPrimary) },
+            text = { Text(stringResource(R.string.chat_clear_text), color = FitCoachColors.TextSecondary) },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearHistory(); confirmClear = false }) {
-                    Text("Очистить", color = FitCoachColors.Error)
+                    Text(stringResource(R.string.chat_clear_confirm), color = FitCoachColors.Error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) { Text("Отмена", color = FitCoachColors.TextSecondary) }
+                TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextSecondary) }
             }
         )
     }
@@ -100,7 +102,7 @@ fun ChatScreen(
         ChatTopBar(
             title = state.coachName,
             mode = state.mode,
-            trainerWhatsappUrl = state.trainerWhatsappUrl,
+            trainerWhatsappUrl = remember { trainerWhatsappUrl(context) },
             onBack = onBack,
             onAskTrainer = { url ->
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
@@ -116,7 +118,7 @@ fun ChatScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
-                    "Демо-режим: ответы подготовлены заранее и работают без интернета.",
+                    stringResource(R.string.chat_demo_banner),
                     fontSize = 12.sp,
                     color = FitCoachColors.Warning
                 )
@@ -143,7 +145,8 @@ fun ChatScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(bottom = 8.dp)
         ) {
-            items(state.quickPrompts) { prompt ->
+            items(state.quickPrompts) { promptRes ->
+                val prompt = stringResource(promptRes)
                 AssistChip(
                     onClick = { viewModel.sendMessage(prompt) },
                     enabled = !state.isTyping,
@@ -190,7 +193,7 @@ private fun ChatTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = FitCoachColors.TextPrimary)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = FitCoachColors.TextPrimary)
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -204,11 +207,11 @@ private fun ChatTopBar(
         }
         if (trainerWhatsappUrl != null) {
             IconButton(onClick = { onAskTrainer(trainerWhatsappUrl) }) {
-                Icon(Icons.Default.SupportAgent, contentDescription = "Спросить тренера", tint = FitCoachColors.Accent)
+                Icon(Icons.Default.SupportAgent, contentDescription = stringResource(R.string.chat_ask_trainer), tint = FitCoachColors.Accent)
             }
         }
         IconButton(onClick = onClear) {
-            Icon(Icons.Default.DeleteSweep, contentDescription = "Очистить", tint = FitCoachColors.TextMuted)
+            Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.chat_clear), tint = FitCoachColors.TextMuted)
         }
     }
 }
@@ -222,14 +225,14 @@ private fun EmptyChatHint(coachName: String) {
         Text("🏋️", fontSize = 40.sp)
         Spacer(Modifier.height(12.dp))
         Text(
-            "$coachName на связи",
+            stringResource(R.string.chat_empty_title, coachName),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             color = FitCoachColors.TextPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            "Спроси о тренировке, питании или технике — учитываю твою программу и ограничения. Сложный вопрос? Нажми значок наверху, и тренер клуба ответит в WhatsApp.",
+            stringResource(R.string.chat_empty_text),
             fontSize = 13.sp,
             lineHeight = 18.sp,
             color = FitCoachColors.TextSecondary,
@@ -258,7 +261,7 @@ private fun ChatInputBar(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Напиши тренеру…", color = FitCoachColors.TextMuted) },
+            placeholder = { Text(stringResource(R.string.chat_input_placeholder), color = FitCoachColors.TextMuted) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = FitCoachColors.TextPrimary,
                 unfocusedTextColor = FitCoachColors.TextPrimary,
@@ -279,7 +282,7 @@ private fun ChatInputBar(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.Send,
-                contentDescription = "Отправить",
+                contentDescription = stringResource(R.string.chat_send),
                 tint = if (canSend) FitCoachColors.AccentOn else FitCoachColors.TextMuted
             )
         }

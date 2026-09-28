@@ -10,17 +10,21 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitcoach.app.BuildConfig
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.domain.model.Goal
 import com.fitcoach.app.domain.model.Level
 import com.fitcoach.app.domain.model.Restriction
 import com.fitcoach.app.domain.model.Sex
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.PrimaryButton
 import com.fitcoach.app.presentation.components.SectionLabel
@@ -38,9 +42,14 @@ fun SettingsScreen(
     val form = state.form
     val snackbar = remember { SnackbarHostState() }
     var confirmClear by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(state.message) {
-        state.message?.let { snackbar.showSnackbar(it); viewModel.consumeMessage() }
+        state.message?.let { msg ->
+            val text = if (msg.arg != null) context.getString(msg.textRes, msg.arg) else context.getString(msg.textRes)
+            snackbar.showSnackbar(text)
+            viewModel.consumeMessage()
+        }
     }
 
     Scaffold(
@@ -48,9 +57,9 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Настройки", color = FitCoachColors.TextPrimary) },
+                title = { Text(stringResource(R.string.settings_title), color = FitCoachColors.TextPrimary) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = FitCoachColors.TextPrimary) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = FitCoachColors.TextPrimary) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FitCoachColors.Surface)
             )
@@ -62,38 +71,38 @@ fun SettingsScreen(
         ) {
             // Профиль
             FitCard {
-                SectionLabel("Профиль")
+                SectionLabel(stringResource(R.string.settings_profile))
                 Spacer(Modifier.height(12.dp))
-                SettingsTextField("Имя", form.name) { v -> viewModel.edit { it.copy(name = v) } }
+                SettingsTextField(stringResource(R.string.settings_name), form.name) { v -> viewModel.edit { it.copy(name = v) } }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-                    SelectableChip("Мужской", form.sex == Sex.MALE, { viewModel.edit { it.copy(sex = Sex.MALE) } }, Modifier.weight(1f))
-                    SelectableChip("Женский", form.sex == Sex.FEMALE, { viewModel.edit { it.copy(sex = Sex.FEMALE) } }, Modifier.weight(1f))
+                    SelectableChip(stringResource(R.string.onboarding_sex_male), form.sex == Sex.MALE, { viewModel.edit { it.copy(sex = Sex.MALE) } }, Modifier.weight(1f))
+                    SelectableChip(stringResource(R.string.onboarding_sex_female), form.sex == Sex.FEMALE, { viewModel.edit { it.copy(sex = Sex.FEMALE) } }, Modifier.weight(1f))
                 }
-                SettingsTextField("Возраст", form.age, KeyboardType.Number) { v -> viewModel.edit { it.copy(age = v) } }
-                SettingsTextField("Рост (см)", form.heightCm, KeyboardType.Number) { v -> viewModel.edit { it.copy(heightCm = v) } }
-                SettingsTextField("Вес (кг)", form.weightKg, KeyboardType.Decimal) { v -> viewModel.edit { it.copy(weightKg = v) } }
-                SettingsTextField("Целевой вес (кг)", form.targetWeightKg, KeyboardType.Decimal) { v -> viewModel.edit { it.copy(targetWeightKg = v) } }
+                SettingsTextField(stringResource(R.string.settings_age), form.age, KeyboardType.Number) { v -> viewModel.edit { it.copy(age = v) } }
+                SettingsTextField(stringResource(R.string.settings_height), form.heightCm, KeyboardType.Number) { v -> viewModel.edit { it.copy(heightCm = v) } }
+                SettingsTextField(stringResource(R.string.settings_weight), form.weightKg, KeyboardType.Decimal) { v -> viewModel.edit { it.copy(weightKg = v) } }
+                SettingsTextField(stringResource(R.string.settings_target_weight), form.targetWeightKg, KeyboardType.Decimal) { v -> viewModel.edit { it.copy(targetWeightKg = v) } }
             }
 
             // Тренировки
             FitCard {
-                SectionLabel("Цель и уровень")
+                SectionLabel(stringResource(R.string.settings_goal_level))
                 Spacer(Modifier.height(10.dp))
-                ChipGrid(Goal.entries.map { it.emoji + " " + it.title to (form.goal == it) }) { i -> viewModel.edit { it.copy(goal = Goal.entries[i]) } }
+                ChipGrid(Goal.entries.map { it.emoji + " " + it.title.tr() to (form.goal == it) }) { i -> viewModel.edit { it.copy(goal = Goal.entries[i]) } }
                 Spacer(Modifier.height(10.dp))
-                ChipGrid(Level.entries.map { it.title to (form.level == it) }) { i -> viewModel.edit { it.copy(level = Level.entries[i]) } }
+                ChipGrid(Level.entries.map { it.title.tr() to (form.level == it) }) { i -> viewModel.edit { it.copy(level = Level.entries[i]) } }
                 Spacer(Modifier.height(10.dp))
-                Text("Дней в неделю", fontSize = 13.sp, color = FitCoachColors.TextSecondary)
+                Text(stringResource(R.string.settings_days_per_week), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SelectableChip("3", form.daysPerWeek == 3, { viewModel.edit { it.copy(daysPerWeek = 3) } }, Modifier.weight(1f))
                     SelectableChip("4", form.daysPerWeek == 4, { viewModel.edit { it.copy(daysPerWeek = 4) } }, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(10.dp))
-                Text("Ограничения", fontSize = 13.sp, color = FitCoachColors.TextSecondary)
+                Text(stringResource(R.string.settings_restrictions), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
                 Spacer(Modifier.height(6.dp))
                 Restriction.entries.forEach { r ->
-                    SelectableChip(r.title, r in form.restrictions, { viewModel.toggleRestriction(r) }, Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                    SelectableChip(r.title.tr(), r in form.restrictions, { viewModel.toggleRestriction(r) }, Modifier.fillMaxWidth().padding(bottom = 6.dp),
                         leading = if (r in form.restrictions) "✅" else "⬜")
                 }
             }
@@ -101,26 +110,26 @@ fun SettingsScreen(
             // Цели питания
             FitCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    SectionLabel("Цели питания", Modifier.weight(1f))
-                    TextButton(onClick = viewModel::recalculateGoals) { Text("Пересчитать цели", color = FitCoachColors.Accent, fontSize = 13.sp) }
+                    SectionLabel(stringResource(R.string.settings_nutrition_goals), Modifier.weight(1f))
+                    TextButton(onClick = viewModel::recalculateGoals) { Text(stringResource(R.string.settings_recalculate), color = FitCoachColors.Accent, fontSize = 13.sp) }
                 }
                 Spacer(Modifier.height(8.dp))
-                SettingsTextField("Вода (мл/день)", form.waterGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(waterGoal = v) } }
-                SettingsTextField("Калории (ккал/день)", form.calorieGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(calorieGoal = v) } }
-                SettingsTextField("Белок (г/день)", form.proteinGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(proteinGoal = v) } }
-                SettingsTextField("Углеводы (г/день)", form.carbsGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(carbsGoal = v) } }
-                SettingsTextField("Жиры (г/день)", form.fatGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(fatGoal = v) } }
+                SettingsTextField(stringResource(R.string.settings_water_goal), form.waterGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(waterGoal = v) } }
+                SettingsTextField(stringResource(R.string.settings_calorie_goal), form.calorieGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(calorieGoal = v) } }
+                SettingsTextField(stringResource(R.string.settings_protein_goal), form.proteinGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(proteinGoal = v) } }
+                SettingsTextField(stringResource(R.string.settings_carbs_goal), form.carbsGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(carbsGoal = v) } }
+                SettingsTextField(stringResource(R.string.settings_fat_goal), form.fatGoal, KeyboardType.Number) { v -> viewModel.edit { it.copy(fatGoal = v) } }
             }
 
-            PrimaryButton(text = "Сохранить", onClick = viewModel::save, enabled = state.loaded)
+            PrimaryButton(text = stringResource(R.string.common_save), onClick = viewModel::save, enabled = state.loaded)
 
             // Язык
             FitCard {
-                SectionLabel("Язык / Тіл")
+                SectionLabel(stringResource(R.string.settings_language))
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SelectableChip("Русский", form.language == "ru", { viewModel.setLanguage("ru") }, Modifier.weight(1f), leading = "🇷🇺")
-                    SelectableChip("Қазақша", form.language == "kk", { viewModel.setLanguage("kk") }, Modifier.weight(1f), leading = "🇰🇿")
+                    SelectableChip(stringResource(R.string.onboarding_language_ru), form.language == "ru", { viewModel.setLanguage("ru") }, Modifier.weight(1f), leading = "🇷🇺")
+                    SelectableChip(stringResource(R.string.onboarding_language_kk), form.language == "kk", { viewModel.setLanguage("kk") }, Modifier.weight(1f), leading = "🇰🇿")
                 }
             }
 
@@ -128,22 +137,22 @@ fun SettingsScreen(
 
             // Демо-данные
             FitCard {
-                SectionLabel("Демо-данные")
+                SectionLabel(stringResource(R.string.settings_demo_data))
                 Spacer(Modifier.height(6.dp))
-                Text("Для презентации: 3 недели тренировок, воды, питания и замеров. Профиль не меняется.", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.settings_demo_hint), fontSize = 12.sp, color = FitCoachColors.TextMuted)
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = viewModel::seedDemo, enabled = !state.busy, modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.AccentSoft, contentColor = FitCoachColors.Accent),
                         shape = RoundedCornerShape(12.dp)
-                    ) { Text("Загрузить 3 недели") }
+                    ) { Text(stringResource(R.string.settings_demo_load)) }
                     OutlinedButton(
                         onClick = { confirmClear = true }, enabled = !state.busy, modifier = Modifier.weight(1f),
                         border = BorderStroke(1.dp, FitCoachColors.Error.copy(alpha = 0.6f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.Error),
                         shape = RoundedCornerShape(12.dp)
-                    ) { Text("Очистить всё") }
+                    ) { Text(stringResource(R.string.settings_demo_clear)) }
                 }
                 if (state.busy) {
                     Spacer(Modifier.height(8.dp))
@@ -157,10 +166,10 @@ fun SettingsScreen(
                 border = BorderStroke(1.dp, FitCoachColors.Border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.TextSecondary),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("Пройти онбординг заново") }
+            ) { Text(stringResource(R.string.settings_restart_onboarding)) }
 
             Text(
-                "${BrandConfig.appName} · версия ${BuildConfig.VERSION_NAME} · бренд ${BrandConfig.brandId}",
+                stringResource(R.string.settings_version, BrandConfig.appName, BuildConfig.VERSION_NAME, BrandConfig.brandId),
                 fontSize = 11.sp, color = FitCoachColors.TextMuted,
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
             )
@@ -172,15 +181,15 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             containerColor = FitCoachColors.Card,
-            title = { Text("Очистить все данные?", color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text("Тренировки, вода, питание, замеры и чат будут удалены. Профиль останется.", color = FitCoachColors.TextSecondary) },
+            title = { Text(stringResource(R.string.settings_clear_title), color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.settings_clear_text), color = FitCoachColors.TextSecondary) },
             confirmButton = {
                 Button(
                     onClick = { confirmClear = false; viewModel.clearAll() },
                     colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Error, contentColor = FitCoachColors.TextPrimary)
-                ) { Text("Очистить") }
+                ) { Text(stringResource(R.string.settings_clear_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Отмена", color = FitCoachColors.TextMuted) } }
+            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
         )
     }
 }

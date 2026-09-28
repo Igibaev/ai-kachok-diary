@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -94,9 +95,9 @@ fun QrPassScreen(onBack: () -> Unit, viewModel: QrPassViewModel = hiltViewModel(
         containerColor = FitCoachColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text("Карта участника", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.qr_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = FitCoachColors.Background,
@@ -129,30 +130,30 @@ fun QrPassScreen(onBack: () -> Unit, viewModel: QrPassViewModel = hiltViewModel(
                 ) {
                     val bmp = qr
                     if (bmp != null) {
-                        Image(bmp.asImageBitmap(), contentDescription = "QR-код участника", modifier = Modifier.fillMaxSize())
+                        Image(bmp.asImageBitmap(), contentDescription = stringResource(R.string.qr_code_description), modifier = Modifier.fillMaxSize())
                     } else if (state.memberId.isBlank()) {
-                        Text("Пройдите онбординг, чтобы получить номер участника", color = Color.Black, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.qr_need_onboarding), color = Color.Black, fontSize = 12.sp, textAlign = TextAlign.Center)
                     } else {
                         CircularProgressIndicator(color = FitCoachColors.Accent)
                     }
                 }
                 Spacer(Modifier.height(20.dp))
-                Text(state.name.ifBlank { "Участник клуба" }, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = FitCoachColors.TextPrimary)
+                Text(state.name.ifBlank { stringResource(R.string.qr_default_name) }, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = FitCoachColors.TextPrimary)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     state.memberId.ifBlank { "—" },
                     fontWeight = FontWeight.ExtraBold, fontSize = 34.sp, letterSpacing = 4.sp, color = FitCoachColors.Accent
                 )
-                Text("№ участника", fontSize = 11.sp, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.qr_member_number), fontSize = 11.sp, color = FitCoachColors.TextMuted)
             }
             Spacer(Modifier.height(20.dp))
             Text(
-                "Покажите на ресепшене — администратор отсканирует код или введёт номер.",
+                stringResource(R.string.qr_hint),
                 fontSize = 13.sp, color = FitCoachColors.TextSecondary, textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Карта привязана к этому телефону и профилю в приложении ${BrandConfig.appName}.",
+                stringResource(R.string.qr_bound, BrandConfig.appName),
                 fontSize = 11.sp, color = FitCoachColors.TextMuted, textAlign = TextAlign.Center
             )
         }

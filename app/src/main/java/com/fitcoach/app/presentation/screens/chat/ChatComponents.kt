@@ -22,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.ai.AiMode
 import com.fitcoach.app.domain.model.ChatMessage
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -177,6 +179,16 @@ fun AiModeChip(mode: AiMode, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(color))
-        Text(text = mode.chipLabel, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color)
+        Text(text = aiModeLabel(mode), fontSize = 11.sp, fontWeight = FontWeight.Medium, color = color)
     }
 }
+
+/** Локализованная подпись режима AI (сам enum живёт в слое ai и хранит русские названия). */
+@Composable
+fun aiModeLabel(mode: AiMode): String = stringResource(
+    when (mode) {
+        AiMode.DEMO -> R.string.ai_mode_demo
+        AiMode.CLUB -> R.string.ai_mode_club
+        AiMode.DEVELOPER -> R.string.ai_mode_developer
+    }
+)

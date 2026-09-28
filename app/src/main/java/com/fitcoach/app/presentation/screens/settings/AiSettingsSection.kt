@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -42,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitcoach.app.BuildConfig
+import com.fitcoach.app.R
 import com.fitcoach.app.ai.AiClientSelector
 import com.fitcoach.app.ai.AiMode
 import com.fitcoach.app.brand.BrandConfig
@@ -116,31 +118,31 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             containerColor = FitCoachColors.Card,
-            title = { Text("Очистить историю чата?", color = FitCoachColors.TextPrimary) },
-            text = { Text("Все сообщения с AI-тренером будут удалены с этого устройства.", color = FitCoachColors.TextSecondary) },
+            title = { Text(stringResource(R.string.ai_settings_clear_title), color = FitCoachColors.TextPrimary) },
+            text = { Text(stringResource(R.string.ai_settings_clear_text), color = FitCoachColors.TextSecondary) },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearChat(); confirmClear = false }) {
-                    Text("Очистить", color = FitCoachColors.Error)
+                    Text(stringResource(R.string.chat_clear_confirm), color = FitCoachColors.Error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClear = false }) { Text("Отмена", color = FitCoachColors.TextSecondary) }
+                TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextSecondary) }
             }
         )
     }
 
     FitCard {
-        Text("AI-ТРЕНЕР", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+        Text(stringResource(R.string.ai_settings_title), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
         Spacer(Modifier.height(12.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Режим", color = FitCoachColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.ai_settings_mode), color = FitCoachColors.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(
                     text = when (state.mode) {
-                        AiMode.DEMO -> "Ответы подготовлены заранее, интернет не нужен"
-                        AiMode.CLUB -> "Ответы через AI-сервис клуба"
-                        AiMode.DEVELOPER -> "Прямое подключение, ключ разработчика · ${state.model}"
+                        AiMode.DEMO -> stringResource(R.string.ai_settings_mode_demo)
+                        AiMode.CLUB -> stringResource(R.string.ai_settings_mode_club)
+                        AiMode.DEVELOPER -> stringResource(R.string.ai_settings_mode_developer, state.model)
                     },
                     color = FitCoachColors.TextSecondary,
                     fontSize = 12.sp
@@ -155,10 +157,9 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Демо-режим AI (офлайн)", color = FitCoachColors.TextPrimary, fontSize = 15.sp)
+                Text(stringResource(R.string.ai_settings_force_demo), color = FitCoachColors.TextPrimary, fontSize = 15.sp)
                 Text(
-                    text = if (state.hasProxy || state.isDebug) "Принудительно использовать офлайн-ответы"
-                    else "AI-сервис клуба не настроен — доступен только демо-режим",
+                    text = stringResource(if (state.hasProxy || state.isDebug) R.string.ai_settings_force_demo_hint else R.string.ai_settings_no_proxy),
                     color = FitCoachColors.TextSecondary,
                     fontSize = 12.sp
                 )
@@ -178,9 +179,9 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
             Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = FitCoachColors.Border)
             Spacer(Modifier.height(12.dp))
-            Text("Ключ разработчика (только debug)", color = FitCoachColors.TextPrimary, fontSize = 15.sp)
+            Text(stringResource(R.string.ai_settings_dev_key), color = FitCoachColors.TextPrimary, fontSize = 15.sp)
             Text(
-                "Anthropic API key для прямого режима. Хранится в зашифрованном виде и не попадает в релизные сборки.",
+                stringResource(R.string.ai_settings_dev_key_hint),
                 color = FitCoachColors.TextSecondary,
                 fontSize = 12.sp
             )
@@ -197,7 +198,7 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
                     IconButton(onClick = { keyVisible = !keyVisible }) {
                         Icon(
                             if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (keyVisible) "Скрыть" else "Показать",
+                            contentDescription = stringResource(if (keyVisible) R.string.ai_settings_key_hide else R.string.ai_settings_key_show),
                             tint = FitCoachColors.TextMuted
                         )
                     }
@@ -216,14 +217,14 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
             ) {
                 if (state.apiKey.isNotBlank()) {
                     TextButton(onClick = { keyInput = ""; viewModel.saveApiKey("") }) {
-                        Text("Удалить ключ", color = FitCoachColors.Error)
+                        Text(stringResource(R.string.ai_settings_key_delete), color = FitCoachColors.Error)
                     }
                 }
                 TextButton(
                     onClick = { viewModel.saveApiKey(keyInput.trim()) },
                     enabled = keyInput.trim() != state.apiKey
                 ) {
-                    Text("Сохранить ключ", color = FitCoachColors.Accent)
+                    Text(stringResource(R.string.ai_settings_key_save), color = FitCoachColors.Accent)
                 }
             }
         }
@@ -231,7 +232,7 @@ fun AiSettingsSection(viewModel: AiSettingsViewModel = hiltViewModel()) {
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(color = FitCoachColors.Border)
         TextButton(onClick = { confirmClear = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Очистить историю чата", color = FitCoachColors.TextSecondary)
+            Text(stringResource(R.string.ai_settings_clear_chat), color = FitCoachColors.TextSecondary)
         }
     }
 }

@@ -13,10 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitcoach.app.R
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.LabeledProgressBar
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -36,15 +39,15 @@ fun ProgressScreen(viewModel: ProgressViewModel = hiltViewModel()) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Прогресс", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
+                Text(stringResource(R.string.progress_title), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
                 FloatingActionButton(onClick = { showAdd = true }, containerColor = FitCoachColors.Accent, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = "Добавить замер", tint = FitCoachColors.AccentOn)
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.progress_add_measurement), tint = FitCoachColors.AccentOn)
                 }
             }
 
             // Вес
             FitCard {
-                Text("ВЕС · 90 ДНЕЙ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.progress_weight_90), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                 Spacer(Modifier.height(8.dp))
                 if (state.chartPoints.size >= 2) {
                     WeightChart(
@@ -54,28 +57,29 @@ fun ProgressScreen(viewModel: ProgressViewModel = hiltViewModel()) {
                 } else {
                     Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            if (state.chartPoints.isEmpty()) "Добавьте первый замер — график появится здесь" else "Нужно минимум два замера для графика",
+                            stringResource(if (state.chartPoints.isEmpty()) R.string.progress_chart_empty else R.string.progress_chart_need_two),
                             fontSize = 12.sp, color = FitCoachColors.TextMuted
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatItem("Старт", state.startWeight?.let { "%.1f".format(it) } ?: "—", FitCoachColors.TextSecondary)
-                    StatItem("Сейчас", state.currentWeight?.let { "%.1f".format(it) } ?: "—", FitCoachColors.Accent)
-                    StatItem("Цель", state.profile.targetWeightKg?.let { "%.1f".format(it) } ?: "—", FitCoachColors.Success)
+                    StatItem(stringResource(R.string.progress_start), state.startWeight?.let { "%.1f".format(it) } ?: "—", FitCoachColors.TextSecondary)
+                    StatItem(stringResource(R.string.progress_now), state.currentWeight?.let { "%.1f".format(it) } ?: "—", FitCoachColors.Accent)
+                    StatItem(stringResource(R.string.progress_target), state.profile.targetWeightKg?.let { "%.1f".format(it) } ?: "—", FitCoachColors.Success)
                     val diff = if (state.startWeight != null && state.currentWeight != null) state.currentWeight!! - state.startWeight!! else null
                     StatItem(
-                        "Изменение",
+                        stringResource(R.string.progress_change),
                         diff?.let { (if (it > 0) "+" else "") + "%.1f".format(it) } ?: "—",
                         when { diff == null -> FitCoachColors.TextMuted; diff <= 0f -> FitCoachColors.Success; else -> FitCoachColors.Warning }
                     )
                 }
                 Spacer(Modifier.height(12.dp))
+                val shareFailed = stringResource(R.string.progress_share_failed)
                 Button(
                     onClick = {
                         viewModel.share(context) { result ->
-                            if (result.isFailure) scope.launch { snackbar.showSnackbar("Не удалось открыть «Поделиться». Попробуйте ещё раз.") }
+                            if (result.isFailure) scope.launch { snackbar.showSnackbar(shareFailed) }
                         }
                     },
                     enabled = !state.isSharing,
@@ -85,30 +89,30 @@ fun ProgressScreen(viewModel: ProgressViewModel = hiltViewModel()) {
                 ) {
                     Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (state.isSharing) "Готовим карточку…" else "Поделиться прогрессом", fontWeight = FontWeight.Bold)
+                    Text(stringResource(if (state.isSharing) R.string.progress_share_preparing else R.string.progress_share), fontWeight = FontWeight.Bold)
                 }
             }
 
             // Программа
             FitCard {
-                Text("ПРОГРАММА · ${state.programTitle.uppercase()}", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.progress_program, state.programTitle.tr().uppercase()), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                 Spacer(Modifier.height(10.dp))
                 LabeledProgressBar(
                     value = state.programCompleted.toFloat(), max = state.programTotal.toFloat(), color = FitCoachColors.Accent,
-                    label = "Тренировок выполнено", sub = "${state.programCompleted}/${state.programTotal}"
+                    label = stringResource(R.string.progress_workouts_done), sub = stringResource(R.string.progress_ratio, state.programCompleted, state.programTotal)
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    StatItem("Неделя", "${state.weekInProgram}/${ProgressViewModel.PROGRAM_WEEKS}", FitCoachColors.TextPrimary)
-                    StatItem("Недель подряд", "${state.streakWeeks}", if (state.streakWeeks > 0) FitCoachColors.Accent else FitCoachColors.TextSecondary)
-                    StatItem("Поднято, кг", "%,d".format(state.totalVolumeKg).replace(',', ' '), FitCoachColors.TextPrimary)
+                    StatItem(stringResource(R.string.progress_week), stringResource(R.string.progress_ratio, state.weekInProgram, ProgressViewModel.PROGRAM_WEEKS), FitCoachColors.TextPrimary)
+                    StatItem(stringResource(R.string.progress_streak), "${state.streakWeeks}", if (state.streakWeeks > 0) FitCoachColors.Accent else FitCoachColors.TextSecondary)
+                    StatItem(stringResource(R.string.progress_lifted), "%,d".format(state.totalVolumeKg).replace(',', ' '), FitCoachColors.TextPrimary)
                 }
             }
 
             // Бейджи
             FitCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("ДОСТИЖЕНИЯ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                    Text(stringResource(R.string.progress_badges), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                     Text("${state.earnedBadges.size}/${state.allBadges.size}", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.Accent)
                 }
                 Spacer(Modifier.height(6.dp))
@@ -117,10 +121,10 @@ fun ProgressScreen(viewModel: ProgressViewModel = hiltViewModel()) {
 
             // История замеров
             FitCard {
-                Text("ИСТОРИЯ ЗАМЕРОВ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.progress_measurements), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                 Spacer(Modifier.height(6.dp))
                 if (state.measurements.isEmpty()) {
-                    Text("Пока нет замеров. Взвешивайтесь утром натощак раз в 3–4 дня.", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                    Text(stringResource(R.string.progress_measurements_empty), fontSize = 12.sp, color = FitCoachColors.TextMuted)
                 } else {
                     state.measurements.forEachIndexed { index, m ->
                         if (index > 0) HorizontalDivider(color = FitCoachColors.Border)

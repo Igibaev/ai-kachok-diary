@@ -2,6 +2,7 @@ package com.fitcoach.app.presentation.screens.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.ai.AiClientSelector
 import com.fitcoach.app.ai.AiContextTitles
 import com.fitcoach.app.ai.AiErrors
@@ -33,11 +34,16 @@ data class ChatUiState(
     val messages: List<ChatMessage> = emptyList(),
     val isTyping: Boolean = false,
     val mode: AiMode = AiMode.DEMO,
-    val quickPrompts: List<String> = emptyList(),
+    /** Идентификаторы строковых ресурсов быстрых подсказок — текст подставляет UI на текущем языке. */
+    val quickPrompts: List<Int> = emptyList(),
     val coachName: String = BrandConfig.aiCoachName,
     /** URL WhatsApp клуба для кнопки «Спросить тренера»; null — WhatsApp не настроен. */
     val trainerWhatsappUrl: String? = null
 )
+
+/** Текст лида для кнопки «Спросить тренера» (локализуется на UI-слое). */
+fun trainerWhatsappUrl(context: android.content.Context): String? =
+    if (BrandConfig.hasWhatsapp) BrandConfig.whatsappUrl(context.getString(R.string.chat_trainer_message, BrandConfig.appName)) else null
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -50,11 +56,7 @@ class ChatViewModel @Inject constructor(
     private val waterRepository: WaterRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(
-        ChatUiState(
-            trainerWhatsappUrl = if (BrandConfig.hasWhatsapp) BrandConfig.whatsappUrl(TRAINER_MESSAGE) else null
-        )
-    )
+    private val _state = MutableStateFlow(ChatUiState())
     val state = _state.asStateFlow()
 
     init {
@@ -162,31 +164,30 @@ class ChatViewModel @Inject constructor(
         val prompts = buildList {
             when {
                 todayWorkout?.isCompleted == true -> {
-                    add("Что поесть после тренировки?")
-                    add("Как восстановиться быстрее?")
+                    add(R.string.chat_prompt_after_workout_food)
+                    add(R.string.chat_prompt_recovery)
                 }
                 hour < 12 -> {
-                    add("Что съесть на завтрак?")
-                    add("Разминка перед тренировкой")
+                    add(R.string.chat_prompt_breakfast)
+                    add(R.string.chat_prompt_warmup)
                 }
                 hour >= 18 -> {
-                    add("Можно ли есть перед сном?")
-                    add("Как улучшить сон?")
+                    add(R.string.chat_prompt_eat_before_sleep)
+                    add(R.string.chat_prompt_sleep)
                 }
                 else -> {
-                    add("Что поесть сейчас?")
-                    add("Тренажёр занят, чем заменить?")
+                    add(R.string.chat_prompt_eat_now)
+                    add(R.string.chat_prompt_machine_busy)
                 }
             }
-            add("Болит спина")
-            add("Мотивируй меня")
-            add("Запиши меня к тренеру")
+            add(R.string.chat_prompt_back_pain)
+            add(R.string.chat_prompt_motivate)
+            add(R.string.chat_prompt_book_trainer)
         }
         _state.update { it.copy(quickPrompts = prompts) }
     }
 
     private companion object {
         const val HISTORY_LIMIT = 20
-        val TRAINER_MESSAGE = "Здравствуйте! Пишу из приложения ${BrandConfig.appName}. Вопрос тренеру: "
     }
 }

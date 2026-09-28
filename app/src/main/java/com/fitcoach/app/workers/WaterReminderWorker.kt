@@ -3,8 +3,10 @@ package com.fitcoach.app.workers
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.repository.UserRepository
 import com.fitcoach.app.domain.repository.WaterRepository
+import com.fitcoach.app.l10n.withLanguage
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.Calendar
@@ -28,10 +30,11 @@ class WaterReminderWorker @AssistedInject constructor(
 
         if (totalToday < profile.waterGoalMl) {
             val left = profile.waterGoalMl - totalToday
+            val res = context.withLanguage(profile.language)
             Notifications.show(
                 context, Notifications.CHANNEL_WATER, ID,
-                "Пора выпить воды 💧",
-                "Сегодня $totalToday из ${profile.waterGoalMl} мл. Осталось $left мл — стакан воды сейчас."
+                res.getString(R.string.notif_water_title),
+                res.getString(R.string.notif_water_text, totalToday, profile.waterGoalMl, left)
             )
         }
         return Result.success()
