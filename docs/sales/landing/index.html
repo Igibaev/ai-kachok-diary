@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Приложение клуба с AI-тренером</title>
+<meta name="description" content="White-label Android-приложение фитнес-клуба с AI-тренером на русском и казахском: под вашим брендом, за 3 недели, в тенге.">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#141414; --card:#1C1C1C; --line:#2A2A2A;
+    --text:#F2F2F2; --muted:#A3A3A3; --accent:#C8FF00; --accent-on:#0D0D0D;
+    --radius:16px; --gutter:16px; --max:1080px;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  img{max-width:100%;display:block}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 var(--gutter)}
+  section{padding:56px 0}
+  h1,h2,h3{line-height:1.15;margin:0 0 16px;letter-spacing:-.01em}
+  h1{font-size:clamp(30px,6vw,56px);font-weight:800}
+  h2{font-size:clamp(24px,4vw,36px);font-weight:800}
+  h3{font-size:18px;font-weight:700}
+  p{margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .btn{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:var(--accent-on);font-weight:800;text-decoration:none;padding:14px 22px;border-radius:999px;border:0;cursor:pointer;font-size:16px}
+  .btn:hover{filter:brightness(1.05)}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted)}
+
+  /* header */
+  header{position:sticky;top:0;z-index:10;background:rgba(13,13,13,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:12px;height:60px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:var(--text)}
+  .logo i{width:28px;height:28px;border-radius:8px;background:var(--accent);display:inline-block;position:relative}
+  .logo i::after{content:"";position:absolute;left:8px;top:8px;width:12px;height:12px;border-radius:3px;background:var(--accent-on)}
+  .lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .lang button{background:transparent;color:var(--muted);border:0;padding:6px 12px;font-weight:700;cursor:pointer;font-size:13px}
+  .lang button[aria-pressed="true"]{background:var(--accent);color:var(--accent-on)}
+  .nav .btn{display:none}
+  @media(min-width:640px){.nav .btn{display:inline-flex;padding:10px 16px;font-size:14px}}
+
+  /* hero */
+  .hero{padding:56px 0 40px}
+  .hero-grid{display:grid;gap:32px;align-items:center}
+  @media(min-width:900px){.hero-grid{grid-template-columns:1.1fr .9fr}}
+  .hero p.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:56ch}
+  .hero .cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:24px 0 8px}
+  .hero .facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .phone{background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:10px;max-width:420px;margin:0 auto}
+  .phone img{border-radius:20px}
+
+  /* cards */
+  .grid{display:grid;gap:16px}
+  @media(min-width:640px){.grid.c2{grid-template-columns:1fr 1fr}.grid.c3{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:960px){.grid.c3{grid-template-columns:repeat(3,1fr)}.grid.c4{grid-template-columns:repeat(4,1fr)}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+  .card .n{color:var(--accent);font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+  .card h3{margin-bottom:8px}
+  .card p{color:var(--muted);margin:0}
+
+  /* screens */
+  .screens{display:grid;gap:16px;grid-template-columns:repeat(2,1fr)}
+  @media(min-width:900px){.screens{grid-template-columns:repeat(3,1fr)}}
+  .shot{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  .shot img{border-radius:12px;aspect-ratio:9/19.5;object-fit:cover;width:100%}
+  .shot figcaption{padding:12px 6px 4px;font-size:14px;color:var(--muted)}
+  .shot figcaption b{color:var(--text);display:block;margin-bottom:2px}
+
+  /* steps */
+  .steps{counter-reset:s}
+  .step{position:relative;padding-left:56px}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:40px;height:40px;border-radius:12px;background:var(--accent);color:var(--accent-on);font-weight:800;display:grid;place-items:center;font-size:18px}
+
+  /* pricing */
+  .price-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+  table{border-collapse:collapse;width:100%;min-width:680px;font-size:15px}
+  th,td{padding:14px 16px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em}
+  thead th:not(:first-child){color:var(--text);font-size:17px;text-transform:none;letter-spacing:0}
+  thead th.hl{color:var(--accent)}
+  td.hl{background:rgba(200,255,0,.05)}
+  .price{font-size:22px;font-weight:800;white-space:nowrap}
+  .price small{display:block;font-size:13px;color:var(--muted);font-weight:500}
+  tr:last-child td{border-bottom:0}
+  .ok{color:var(--accent);font-weight:700}
+  .no{color:var(--muted)}
+  .note{font-size:14px;color:var(--muted);margin-top:14px}
+
+  /* roi */
+  .roi{background:linear-gradient(135deg,rgba(200,255,0,.12),rgba(200,255,0,0) 60%),var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px;display:grid;gap:20px}
+  @media(min-width:900px){.roi{grid-template-columns:1.2fr .8fr;align-items:center}}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi b{display:block;font-size:20px;color:var(--accent)}
+  .kpi span{font-size:12px;color:var(--muted)}
+
+  /* faq */
+  details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:0 20px;margin-bottom:10px}
+  summary{cursor:pointer;font-weight:700;padding:18px 0;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:var(--accent);font-weight:800;font-size:22px;line-height:1}
+  details[open] summary::after{content:"–"}
+  details p{color:var(--muted);padding-bottom:18px}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:32px 0 48px;color:var(--muted);font-size:14px}
+  footer .row{display:flex;flex-wrap:wrap;gap:16px 32px;justify-content:space-between}
+  footer a{color:var(--text)}
+  .final{text-align:center;padding:64px 0}
+  .final .btn{font-size:18px;padding:18px 28px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a class="logo" href="#top"><i></i><span data-i18n="brand">Приложение клуба</span></a>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="lang" role="group" aria-label="Язык">
+        <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+        <button type="button" data-lang="kk" aria-pressed="false">KK</button>
+      </div>
+      <a class="btn" href="https://wa.me/7XXXXXXXXXX?text=ДЕМО" target="_blank" rel="noopener" data-i18n="cta">Написать в WhatsApp</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="pill" data-i18n="pill">Android · RU / KK · Google Play под вашим аккаунтом</span>
+      <h1 style="margin-top:16px" data-i18n="h1">Ваше фитнес-приложение с AI-тренером за 3 недели</h1>
+      <p class="lead" data-i18n="lead">Приложение вашего клуба под вашим брендом: AI-тренер на русском и казахском, программы и дневник тренировок, запись к тренеру в ваш WhatsApp, сторис с вашим логотипом. В тенге, без НДС, ключи и аккаунты — у вас.</p>
+      <div class="cta">
+        <a class="btn" href="https://wa.me/7XXXXXXXXXX?text=ДЕМО" target="_blank" rel="noopener" data-i18n="cta">Написать в WhatsApp</a>
+        <a class="btn ghost" href="#how" data-i18n="cta2">Как это выглядит</a>
+      </div>
+      <p class="muted" style="font-size:14px" data-i18n="sub">Демо на вашем логотипе — бесплатно, до встречи. 15 минут в вашем клубе.</p>
+      <div class="facts">
+        <span class="pill" data-i18n="f1">15 рабочих дней до передачи</span>
+        <span class="pill" data-i18n="f2">Пилот 45 дней с зачётом 100 %</span>
+        <span class="pill" data-i18n="f3">Исходники — по договору</span>
+      </div>
+    </div>
+    <div class="phone"><img src="../../img/hero.png" alt="Главный экран приложения клуба с AI-тренером" width="1080" height="2340"></div>
+  </div>
+</section>
+
+<!-- ДЛЯ КОГО -->
+<section id="who">
+  <div class="wrap">
+    <h2>Для кого</h2>
+    <p class="muted" style="max-width:70ch">Самостоятельные клубы, мини-сети и студии в Алматы, Астане, Шымкенте, Караганде, Актобе и Атырау, где решение принимает собственник.</p>
+    <div class="grid c3" style="margin-top:24px">
+      <div class="card"><div class="n">Подходит</div><h3>Клуб или студия на 300–3 000 карт</h3><p>Запись к тренерам идёт через WhatsApp, расписание — на ресепшене, акции — в сторис. Приложения нет или оно заброшено.</p></div>
+      <div class="card"><div class="n">Подходит</div><h3>Есть Mobifitness / Fitbase / 1С</h3><p>У вас закрыты абонемент и заморозка. Мы добавляем то, ради чего клиент открывает приложение между визитами: AI-тренер, дневник, сторис.</p></div>
+      <div class="card"><div class="n">Подходит</div><h3>Важен казахский язык</h3><p>Шымкент, Астана, Актобе, женские студии. Интерфейс и AI-тренер отвечают на языке клиента — этого нет ни у одного российского решения.</p></div>
+      <div class="card"><div class="n">Не подходит</div><h3>Зал за 8 000 ₸/мес с одним филиалом</h3><p>Подписка не окупится. Скажем об этом на первом разговоре.</p></div>
+      <div class="card"><div class="n">Не подходит</div><h3>«Без iOS не обсуждаем»</h3><p>Стартуем с Android — 59 % телефонов в Казахстане. iOS — опцион с фиксированной ценой после пилота.</p></div>
+      <div class="card"><div class="n">Не подходит</div><h3>Нужен турникет и оплата в приложении завтра</h3><p>Это интеграция с вашей CRM — опцион второго этапа, не старт.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ПРЕИМУЩЕСТВА -->
+<section id="why" style="background:var(--surface)">
+  <div class="wrap">
+    <h2>Что получает клуб</h2>
+    <div class="grid c3" style="margin-top:24px">
+      <div class="card"><div class="n">01</div><h3>AI-тренер вашего клуба, RU / KK</h3><p>Отвечает 24/7: техника, замена занятого тренажёра, питание. Учитывает ограничения (спина, колени). На вопросы о здоровье мягко отправляет к врачу и вашему тренеру.</p></div>
+      <div class="card"><div class="n">02</div><h3>Запись к тренеру → ваш WhatsApp</h3><p>Кнопка в приложении открывает ваш WhatsApp с текстом «из приложения». Вы считаете, сколько записей и продаж ПТ принесло приложение — без CRM.</p></div>
+      <div class="card"><div class="n">03</div><h3>Сторис с вашим логотипом</h3><p>После тренировки — карточка с результатом, логотипом клуба и промокодом «приведи друга». Клиент публикует в один тап — это охват, за который вы иначе платите таргету.</p></div>
+      <div class="card"><div class="n">04</div><h3>Ваш бренд, ваш Google Play</h3><p>Иконка, цвета, имя AI-тренера — ваши. Публикация под аккаунтом клуба в Google Play и Huawei AppGallery. Keystore и доступы — у вас с первого дня.</p></div>
+      <div class="card"><div class="n">05</div><h3>Акции меняете сами</h3><p>Расписание, тренеры, акции живут в Google-таблице. Поменяли строку — через минуту она у всех клиентов с уведомлением «новая акция». Без программиста.</p></div>
+      <div class="card"><div class="n">06</div><h3>Данные — на телефоне клиента</h3><p>Нет регистрации, нет серверной базы с весом и травмами ваших клиентов. Согласие и политика на RU/KK встроены. Закон РК № 94-V — нечему утекать.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- КАК ВЫГЛЯДИТ -->
+<section id="how">
+  <div class="wrap">
+    <h2>Как это выглядит</h2>
+    <p class="muted">Скриншоты демо-бренда. Под ваш клуб — ваши цвета, логотип и имя тренера.</p>
+    <div class="screens" style="margin-top:24px">
+      <figure class="shot" style="margin:0"><img src="../../img/01_dashboard.png" alt="Главный экран: программа, стрик, ближайшая тренировка" loading="lazy"><figcaption><b>Главная</b>Программа, серия тренировок, рекорды</figcaption></figure>
+      <figure class="shot" style="margin:0"><img src="../../img/02_workout.png" alt="Экран тренировки с подсказкой «прошлый раз» и таймером" loading="lazy"><figcaption><b>Тренировка</b>«Прошлый раз 22 × 10», таймер, рекорд</figcaption></figure>
+      <figure class="shot" style="margin:0"><img src="../../img/03_chat.png" alt="Чат с AI-тренером" loading="lazy"><figcaption><b>AI-тренер</b>Замена упражнения → «записаться к тренеру»</figcaption></figure>
+      <figure class="shot" style="margin:0"><img src="../../img/04_club.png" alt="Вкладка «Клуб»: контакты, тренеры, акции" loading="lazy"><figcaption><b>Клуб</b>Контакты, 2GIS, тренеры, акции, WhatsApp</figcaption></figure>
+      <figure class="shot" style="margin:0"><img src="../../img/05_story_card.png" alt="Карточка для Instagram Stories с логотипом клуба и промокодом" loading="lazy"><figcaption><b>Stories</b>Логотип клуба и промокод «приведи друга»</figcaption></figure>
+      <figure class="shot" style="margin:0"><img src="../../img/06_onboarding.png" alt="Онбординг с выбором языка и ограничений по здоровью" loading="lazy"><figcaption><b>Онбординг</b>60 секунд, RU → KK, ограничения</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- КАК РАБОТАЕТ -->
+<section id="process" style="background:var(--surface)">
+  <div class="wrap">
+    <h2>Как это работает</h2>
+    <div class="grid c4 steps" style="margin-top:24px">
+      <div class="card step"><h3>Демо на вашем логотипе</h3><p>За час собираю сборку по вашему Instagram и 2GIS. 15 минут в клубе на моих телефонах — без ноутбука и Wi-Fi.</p></div>
+      <div class="card step"><h3>Пилот 45 дней</h3><p>450 000 ₸, засчитываются в пакет полностью. Приложение у 30–50 клиентов, еженедельный отчёт: установки, вопросы AI, записи «из приложения», сторис.</p></div>
+      <div class="card step"><h3>Договор и сборка — 15 рабочих дней</h3><p>50 % при подписании, 50 % по акту. Ваш логотип, тренеры, акции, Google-таблица, AI-тренер с вашим именем. Аккаунт Google Play — запускаем в день подписания.</p></div>
+      <div class="card step"><h3>Запуск в клубе</h3><p>QR-плакаты, скрипт администратора, бонус за установку, 5 сторис и 5 постов. Цель — 30 % клиентов с приложением за 60 дней. Дальше — поддержка по SLA.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ЦЕНЫ -->
+<section id="price">
+  <div class="wrap">
+    <h2>Пакеты и цены</h2>
+    <p class="muted">Тенге, без НДС. Цены фиксируются в договоре. Опционы второго этапа — тоже с фиксированной ценой на 12 месяцев.</p>
+    <div class="price-wrap" style="margin-top:24px">
+      <table>
+        <thead>
+          <tr><th></th><th>Старт</th><th class="hl">Клуб — рекомендуем</th><th>Эксклюзив</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Разовый платёж</th><td><span class="price">1 490 000 ₸</span></td><td class="hl"><span class="price">2 990 000 ₸</span></td><td><span class="price">7 900 000 ₸</span></td></tr>
+          <tr><th>Подписка</th><td><span class="price">99 000 ₸<small>в месяц</small></span></td><td class="hl"><span class="price">199 000 ₸<small>в месяц</small></span></td><td><span class="price">6 мес включено<small>далее по желанию 299 000 ₸/мес</small></span></td></tr>
+          <tr><th>Кому</th><td>Один клуб или студия, 300–800 карт</td><td class="hl">Клуб или мини-сеть до 3 филиалов, 500–3 000 карт</td><td>Сеть или клуб, который хочет владеть кодом</td></tr>
+          <tr><th>Языки</th><td>RU</td><td class="hl">RU + KK</td><td>RU + KK</td></tr>
+          <tr><th>AI-тренер</th><td>до 2 000 сообщений/мес</td><td class="hl">до 6 000 сообщений/мес</td><td>до 12 000 сообщений/мес</td></tr>
+          <tr><th>Акции и расписание в Google-таблице</th><td class="no">правки через нас</td><td class="hl ok">сами, без лимита</td><td class="ok">сами</td></tr>
+          <tr><th>Сторис с логотипом и промокодом</th><td class="no">—</td><td class="hl ok">✔</td><td class="ok">✔</td></tr>
+          <tr><th>Публикация</th><td>Google Play</td><td class="hl">Google Play + AppGallery</td><td>Google Play + AppGallery + APK</td></tr>
+          <tr><th>Филиалов</th><td>1</td><td class="hl">до 3</td><td>без ограничений</td></tr>
+          <tr><th>Поддержка (реакция / критический сбой)</th><td>3 раб. дня / 5 раб. дней</td><td class="hl">2 раб. дня / 48 часов</td><td>1 раб. день / 24 часа</td></tr>
+          <tr><th>Исходный код</th><td class="no">передаётся при остановке поддержки</td><td class="hl">передаётся при остановке поддержки</td><td class="ok">передаётся сразу + эксклюзив на город 12 мес</td></tr>
+          <tr><th>Срок передачи</th><td>10 рабочих дней</td><td class="hl">15 рабочих дней</td><td>20 рабочих дней</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><b style="color:var(--text)">Пилот 45 дней — 450 000 ₸</b>, сумма полностью засчитывается в любой пакет при договоре в течение 30 дней после пилота. Оплата пакета — 50 % при подписании, 50 % по акту; при оплате подписки за год — 2 месяца в подарок.</p>
+    <p class="note"><b style="color:var(--text)">Опционы второго этапа:</b> iOS-версия — 3 500 000 ₸; интеграция с 1С:Фитнес клуб — 2 500 000 ₸; панель владельца с аналитикой — 1 200 000 ₸; серверные push — 490 000 ₸. Ключ AI — на аккаунте клуба; ориентир расхода — 0,0055 $ за сообщение (Claude Sonnet).</p>
+    <p class="note">Для сравнения: заказная разработка приложения для бизнеса в Алматы — 1,5–3 млн ₸ у агентств и 3,5–10 млн ₸ у студий, 2–6 месяцев, без AI и без казахского (AOne Agency, Kulenkov Group, 1-000.kz).</p>
+  </div>
+</section>
+
+<!-- ROI -->
+<section id="roi" style="background:var(--surface)">
+  <div class="wrap">
+    <div class="roi">
+      <div>
+        <h2>Посчитайте на своих цифрах</h2>
+        <p class="muted">Отток в фитнесе — 28–30 % в год, 42 % новичков бросают в первые 3 месяца (IntellectDialog, 2026). Калькулятор считает три эффекта: сохранённая выручка от удержания, дополнительные продажи персональных тренировок, эквивалент рекламы от сторис клиентов — и срок окупаемости пакета.</p>
+        <p class="muted" style="font-size:14px">Пример ниже — клуб на 1 200 карт, чек 22 000 ₸/мес, 40 % клиентов с приложением, снижение оттока 15 %, +10 % продаж ПТ. Допущения консервативные; настоящие цифры даёт пилот.</p>
+        <a class="btn" href="../roi_calculator.html">Открыть калькулятор</a>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b>~1 200</b><span>активных карт — пример</span></div>
+        <div class="kpi"><b>~480</b><span>клиентов с приложением (40 %)</span></div>
+        <div class="kpi"><b>&lt; 12 мес</b><span>ориентир окупаемости пакета «Клуб» при этих вводных — проверьте в калькуляторе</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <h2>Вопросы, которые задают владельцы</h2>
+    <div style="margin-top:24px">
+      <details><summary>У нас уже есть 1С / Mobifitness / Fitbase. Зачем второе приложение?</summary><p>Ваше приложение — про абонемент, заморозку и оплату; у всех клубов на этих платформах одинаковый набор. Наше — про то, чтобы клиент тренировался, не бросил через 3 месяца и записался к вашему тренеру: AI-тренер, дневник, сторис. Это дополнение, не замена. Интеграция с 1С — опцион 2 500 000 ₸ после пилота.</p></details>
+      <details><summary>А iOS?</summary><p>Стартуем с Android — 58,8 % телефонов в Казахстане (Statcounter, август 2026) плюс все Huawei/Honor через AppGallery. iOS — опцион 3 500 000 ₸ с фиксированной ценой на 12 месяцев в договоре, срок 8–10 недель. Заказывается, когда Android-пилот показал цифры.</p></details>
+      <details><summary>А если вы пропадёте?</summary><p>Keystore, аккаунты Google Play и AppGallery, Google-таблица и ключ AI — ваши с первого дня; приложение работает без меня. В договоре: если поддержка остановлена более 60 дней — исходный код передаётся вам автоматически. В пакете Эксклюзив код ваш сразу.</p></details>
+      <details><summary>Кто отвечает за советы AI по здоровью?</summary><p>AI-тренер — информационный сервис, не медицина. На вопросы о давлении, беременности, боли отвечает отказом и направляет к врачу и вашему тренеру; ограничения из анкеты исключают упражнения из программы. Согласие и дисклеймер — в приложении до первого экрана, ограничение ответственности — в договоре, протокол теста опасных вопросов — вам перед релизом.</p></details>
+      <details><summary>Зачем казахский?</summary><p>27 % поисковых запросов в Казахстане — на казахском, и эта аудитория заметно активнее (paygate.kz, 2026). Казахский у нас — не перевод меню, а AI-тренер, который отвечает на языке вопроса. Клиент выбирает язык сам. Если 95 % ваших клиентов пишут по-русски — берите пакет Старт, он дешевле.</p></details>
+      <details><summary>Сколько будет стоить AI?</summary><p>Ключ — на вашем аккаунте, счёт видите сами. Один вопрос на модели Claude Sonnet ≈ 0,0055 $. 100 активных клиентов по 5 вопросов в неделю ≈ 12 $ в месяц. В пакет Клуб входит 6 000 сообщений/мес; сверх — 9 900 ₸ за 1 000. Дневные лимиты на устройство и на клуб зашиты в прокси — превысить бюджет нельзя технически.</p></details>
+      <details><summary>Куда уходят данные клиентов?</summary><p>Никуда: базы на сервере нет, имя, вес, ограничения и дневник — только на телефоне клиента, регистрации и номера телефона нет. В AI уходит только текст вопроса и обезличенный контекст (пол, возраст, вес, цель) через ваш прокси — без имени и телефона; прокси ничего не хранит. Согласие на данные о здоровье и трансграничную передачу клиент даёт в приложении; политика — на русском и казахском.</p></details>
+      <details><summary>Дорого.</summary><p>Заказная разработка похожего приложения в Алматы — 1,5–3 млн ₸ у агентств и 3,5–10 млн ₸ у студий, без AI и казахского, 2–6 месяцев. Пакет Клуб — это 12–20 годовых карт при годовой 180–280 тыс. ₸. Если бюджет жёсткий — пакет Старт 1 490 000 ₸ или пилот 450 000 ₸ с полным зачётом: сначала цифры, потом решение.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final" style="background:var(--surface)">
+  <div class="wrap">
+    <h2 data-i18n="final">Покажу приложение с вашим логотипом — до встречи</h2>
+    <p class="muted" data-i18n="final-sub">Напишите название клуба и город. За час соберу сборку и пришлю 60-секундное видео. Бесплатно, без обязательств.</p>
+    <a class="btn" href="https://wa.me/7XXXXXXXXXX?text=ДЕМО" target="_blank" rel="noopener" data-i18n="cta">Написать в WhatsApp</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <div>
+      <b style="color:var(--text)">{{ИМЯ ПРОДАВЦА}}</b> · {{ИП / ТОО}} · БИН/ИИН {{БИН}}<br>
+      Режим налогообложения: упрощённая декларация, без НДС · {{ГОРОД}}
+    </div>
+    <div>
+      WhatsApp: <a href="https://wa.me/7XXXXXXXXXX">+7 XXX XXX XX XX</a><br>
+      E-mail: <a href="mailto:hello@example.kz">hello@example.kz</a> · Instagram: <a href="https://instagram.com/your_account">@your_account</a>
+    </div>
+    <div>
+      <a href="../kp_onepager.html">Коммерческое предложение</a> · <a href="../roi_calculator.html">ROI-калькулятор</a><br>
+      <a href="../../PRIVACY_POLICY_ru.md">Политика конфиденциальности (шаблон)</a>
+    </div>
+  </div>
+  <div class="wrap" style="margin-top:20px;font-size:12px">AI-тренер — информационный сервис, не медицинская консультация. Цены в тенге без НДС, действительны на дату коммерческого предложения. Источники цифр — в КП.</div>
+</footer>
+
+<script>
+(function(){
+  var i18n = {
+    ru: {
+      brand: "Приложение клуба",
+      pill: "Android · RU / KK · Google Play под вашим аккаунтом",
+      h1: "Ваше фитнес-приложение с AI-тренером за 3 недели",
+      lead: "Приложение вашего клуба под вашим брендом: AI-тренер на русском и казахском, программы и дневник тренировок, запись к тренеру в ваш WhatsApp, сторис с вашим логотипом. В тенге, без НДС, ключи и аккаунты — у вас.",
+      cta: "Написать в WhatsApp",
+      cta2: "Как это выглядит",
+      sub: "Демо на вашем логотипе — бесплатно, до встречи. 15 минут в вашем клубе.",
+      f1: "15 рабочих дней до передачи",
+      f2: "Пилот 45 дней с зачётом 100 %",
+      f3: "Исходники — по договору",
+      final: "Покажу приложение с вашим логотипом — до встречи",
+      "final-sub": "Напишите название клуба и город. За час соберу сборку и пришлю 60-секундное видео. Бесплатно, без обязательств."
+    },
+    kk: {
+      brand: "Клуб қосымшасы",
+      pill: "Android · RU / KK · Google Play — сіздің аккаунтыңызда",
+      h1: "AI-жаттықтырушысы бар фитнес-қосымшаңыз — 3 аптада",
+      lead: "Клубыңыздың қосымшасы өз брендіңізбен: қазақша және орысша жауап беретін AI-жаттықтырушы, бағдарламалар мен жаттығу күнделігі, WhatsApp арқылы жаттықтырушыға жазылу, логотипіңізбен сторис. Теңгемен, ҚҚС-сыз, кілттер мен аккаунттар — сізде.",
+      cta: "WhatsApp-қа жазу",
+      cta2: "Қалай көрінеді",
+      sub: "Логотипіңізбен демо — тегін, кездесуге дейін. Клубыңызда 15 минут.",
+      f1: "Тапсыруға дейін 15 жұмыс күні",
+      f2: "45 күндік пилот — 100 % есептеледі",
+      f3: "Бастапқы код — шарт бойынша",
+      final: "Логотипіңізбен қосымшаны кездесуге дейін көрсетемін",
+      "final-sub": "Клубтың атауы мен қаланы жазыңыз. Бір сағатта жинап, 60 секундтық бейне жіберемін. Тегін, міндеттемесіз."
+    }
+  };
+  var buttons = document.querySelectorAll('.lang button');
+  function apply(lang){
+    var dict = i18n[lang] || i18n.ru;
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var key = el.getAttribute('data-i18n');
+      if (dict[key]) el.textContent = dict[key];
+    });
+    buttons.forEach(function(b){ b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.documentElement.setAttribute('lang', lang);
+    try { localStorage.setItem('lang', lang); } catch (e) {}
+  }
+  buttons.forEach(function(b){ b.addEventListener('click', function(){ apply(b.getAttribute('data-lang')); }); });
+  var saved = 'ru';
+  try { saved = localStorage.getItem('lang') || 'ru'; } catch (e) {}
+  if (saved !== 'ru') apply(saved);
+})();
+</script>
+</body>
+</html>
