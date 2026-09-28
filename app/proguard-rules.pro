@@ -32,3 +32,8 @@
     public static *** d(...);
     public static *** v(...);
 }
+
+# --- Tink (EncryptedSharedPreferences) ссылается на аннотации errorprone, которых нет в рантайме ---
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+-dontwarn org.checkerframework.**
