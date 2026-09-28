@@ -4,6 +4,10 @@
 > AI-тренер на русском и казахском, запись к тренеру в WhatsApp, акции клуба и карточки для Instagram Stories
 > с логотипом клуба. Один файл конфигурации — один клуб. Android, Kotlin, Jetpack Compose.
 
+<p align="center">
+  <img src="docs/img/hero.png" alt="FitCoach AI — главная, тренировка, AI-чат, клуб" width="900"/>
+</p>
+
 ## Что получает клуб
 
 | Для клиентов клуба | Для владельца |
