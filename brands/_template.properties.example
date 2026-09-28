@@ -30,6 +30,8 @@ clubWebsite=https://fitcoach.example
 # Ссылки на удалённые JSON (опционально). Пусто → берутся файлы из assets/club/.
 clubDataUrl=
 newsUrl=
+# Ссылка на опубликованную политику конфиденциальности (обязательна для Google Play; https://)
+privacyPolicyUrl=
 
 # --- Цвета (HEX, #RRGGBB) ------------------------------------------------------
 accentColor=#C8FF00
