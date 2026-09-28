@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROI-калькулятор приложения клуба</title>
+<meta name="description" content="Расчёт окупаемости white-label фитнес-приложения с AI-тренером для фитнес-клуба в Казахстане (тенге).">
+<style>
+  :root{
+    --bg:#0d0d0d; --surface:#151515; --card:#1c1c1c; --line:#2a2a2a;
+    --text:#f2f2f2; --muted:#9a9a9a; --accent:#c8ff00; --accent-on:#0d0d0d;
+    --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:20px 16px 48px}
+  header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+  h1{font-size:22px;margin:0;letter-spacing:-.01em}
+  h2{font-size:15px;margin:0 0 12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .sub{color:var(--muted);font-size:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .field{display:grid;grid-template-columns:1fr 130px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:0}
+  .field label{font-size:14px}
+  .field small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+  .field input{width:100%;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:8px;
+    padding:9px 10px;font:inherit;font-size:16px;text-align:right;-moz-appearance:textfield}
+  .field input::-webkit-outer-spin-button,.field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .field input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .kpi .l{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .kpi.total{grid-column:1/-1;border-color:var(--accent)}
+  .kpi.total .v{color:var(--accent);font-size:30px}
+  .payback{margin-top:12px;padding:12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+  .payback b{font-size:20px;font-variant-numeric:tabular-nums}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}
+  button{font:inherit;font-size:15px;font-weight:600;border-radius:10px;padding:11px 16px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text)}
+  button.primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
+  button:active{transform:translateY(1px)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--accent);color:var(--accent-on);
+    padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  details{margin-top:16px}
+  summary{cursor:pointer;color:var(--muted);font-size:14px}
+  .formulas{font-size:14px;color:var(--muted)}
+  .formulas code{background:var(--surface);border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:var(--text);font-size:13px}
+  .formulas li{margin:6px 0}
+  .formulas a{color:var(--text)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+  @media print{
+    :root{--bg:#fff;--surface:#fff;--card:#fff;--line:#bbb;--text:#000;--muted:#444;--accent:#000;--accent-on:#fff;color-scheme:light}
+    body{font-size:12px}
+    .actions,.toast,summary{display:none}
+    details{display:block}
+    details:not([open]) .formulas{display:block}
+    .card{break-inside:avoid;border-color:#bbb}
+    .kpi.total .v{color:#000}
+    .field input{border:0;padding:0;background:transparent}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ROI-калькулятор: приложение клуба с AI-тренером</h1>
+      <div class="sub">Тенге, без НДС. Меняйте цифры под клуб — итог пересчитывается сразу. Значения по умолчанию — средний сегмент, Алматы.</div>
+    </div>
+    <div class="sub" id="date"></div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Вводные клуба</h2>
+      <div class="field"><label for="cards">Активных карт (клубных карт / абонементов)<small>Клубы 500–3 000 карт — целевой сегмент</small></label><input id="cards" type="number" min="0" step="10" value="1200"></div>
+      <div class="field"><label for="check">Средний чек, ₸ в месяц с карты<small>Алматы/Астана: 19 000–30 000 ₸/мес (Orda.kz, 2026)</small></label><input id="check" type="number" min="0" step="500" value="22000"></div>
+      <div class="field"><label for="churn">Отток, % в месяц<small>Отрасль: 28–30 % в год ≈ 2,5 %/мес; 42 % новичков уходят за 3 мес</small></label><input id="churn" type="number" min="0" max="100" step="0.5" value="3"></div>
+      <div class="field"><label for="share">Доля клиентов, установивших приложение, %<small>Реалистично 30–50 % при QR-плакатах и бонусе за установку</small></label><input id="share" type="number" min="0" max="100" step="5" value="40"></div>
+      <div class="field"><label for="reduction">Снижение оттока благодаря приложению, %<small>Консервативно 15 % (по умолчанию)</small></label><input id="reduction" type="number" min="0" max="100" step="1" value="15"></div>
+      <div class="field"><label for="lifetime">Сколько месяцев в среднем остаётся «спасённый» клиент<small>Допущение, по умолчанию 6</small></label><input id="lifetime" type="number" min="1" max="36" step="1" value="6"></div>
+      <div class="field"><label for="ptSales">Продаж персональных тренировок (ПТ) в месяц<small>Пакетов/блоков ПТ, шт.</small></label><input id="ptSales" type="number" min="0" step="1" value="40"></div>
+      <div class="field"><label for="ptCheck">Средний чек ПТ, ₸<small>ПТ как допродажа: 50–150 тыс. ₸/мес (NationalBusiness.kz)</small></label><input id="ptCheck" type="number" min="0" step="1000" value="60000"></div>
+      <div class="field"><label for="ptUplift">Прирост продаж ПТ, %<small>AI-тренер → кнопка «записаться к тренеру» в WhatsApp; по умолчанию 10 %</small></label><input id="ptUplift" type="number" min="0" max="100" step="1" value="10"></div>
+      <div class="field"><label for="stories">Сторис в месяц на пользователя приложения<small>Карточка «итог тренировки» с логотипом и промокодом; по умолчанию 2</small></label><input id="stories" type="number" min="0" step="0.5" value="2"></div>
+      <div class="field"><label for="views">Средний охват одной сторис, просмотров<small>Допущение, по умолчанию 150</small></label><input id="views" type="number" min="0" step="10" value="150"></div>
+      <div class="field"><label for="cpm">Стоимость охвата 1 000 в таргете (CPM Stories), ₸<small>Instagram КЗ: Stories 500–1 200 ₸ (iprod.kz), Meta 1 000–3 000 ₸ (metrium.kz)</small></label><input id="cpm" type="number" min="0" step="50" value="1000"></div>
+    </section>
+
+    <section>
+      <div class="card">
+        <h2>Эффект в месяц</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="l">Сохранённая выручка (удержание)</div><div class="v" id="kSaved">—</div><div class="l" id="kSavedSub"></div></div>
+          <div class="kpi"><div class="l">Доп. выручка ПТ</div><div class="v" id="kPt">—</div><div class="l" id="kPtSub"></div></div>
+          <div class="kpi"><div class="l">Эквивалент рекламы от сторис</div><div class="v" id="kStories">—</div><div class="l" id="kStoriesSub"></div></div>
+          <div class="kpi"><div class="l">Итого эффект в месяц</div><div class="v" id="kMonth">—</div><div class="l" id="kUsers"></div></div>
+          <div class="kpi total"><div class="l">Итого эффект в год</div><div class="v" id="kYear">—</div></div>
+        </div>
+        <div class="payback">
+          <div class="l sub">Окупаемость пакета «Клуб» (2 990 000 ₸ разово + 199 000 ₸/мес)</div>
+          <div><b id="kPayback">—</b> <span id="kPaybackNote" class="sub"></span></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Сравнение с пакетами (первый год)</h2>
+        <table id="pkg">
+          <thead><tr><th>Пакет</th><th>Разово</th><th>В месяц</th><th>Год 1, всего</th><th>Эффект − цена</th><th>Окуп., мес</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="note">Опционы фазы 2 (iOS, 1С, панель владельца, FCM) в расчёт не включены. Цены без НДС.</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="copyBtn">Скопировать итог</button>
+    <button id="printBtn">Печать / PDF</button>
+    <button id="resetBtn">Сбросить значения</button>
+  </div>
+
+  <details id="formulas">
+    <summary>Как считается (формулы и источники)</summary>
+    <div class="formulas">
+      <ol>
+        <li><code>Пользователей в приложении = Карты × Доля в приложении</code></li>
+        <li><code>Уходит в месяц = Пользователей в приложении × Отток %</code></li>
+        <li><code>Спасено в месяц = Уходит × Снижение оттока %</code></li>
+        <li><code>Сохранённая выручка/мес = Спасено × Средний чек × Месяцев дожития</code> — каждый удержанный клиент платит чек ещё N месяцев; берём консервативные 6, а не «пожизненно».</li>
+        <li><code>Доп. выручка ПТ/мес = Продаж ПТ × Чек ПТ × Прирост %</code> — прирост даёт кнопка «записаться к тренеру» в WhatsApp и подсказки AI-тренера в чате.</li>
+        <li><code>Эквивалент рекламы/мес = Пользователей × Сторис на пользователя × Охват сторис ÷ 1000 × CPM</code> — сколько стоил бы такой же охват в таргете Instagram; это охват по «тёплым» подписчикам клиентов, поэтому его ценность как минимум не ниже холодного таргета.</li>
+        <li><code>Итого/мес = 1 + 2 + 3</code>, <code>Итого/год = Итого/мес × 12</code>.</li>
+        <li><code>Окупаемость, мес = Разовый платёж ÷ (Итого/мес − Подписка/мес)</code>. Если эффект в месяц меньше подписки — пакет не окупается при этих вводных.</li>
+        <li><code>Эффект − цена (год 1) = Итого/год − (Разово + 12 × Подписка)</code>.</li>
+      </ol>
+      <p><b>Источники для значений по умолчанию:</b>
+        месячный абонемент в Астане и Алматы 19 000–30 000 ₸ — <a href="https://orda.kz/fitnes-stanovitsja-roskoshju-abonementy-v-sportzaly-rezko-podorozhali-v-kazahstane-414668/">Orda.kz / Energyprom, 2026</a>;
+        отток 28–30 % в год, 42 % новичков бросают в первые 3 месяца — <a href="https://intellectdialog.com/tpost/whatsapp-rassylki-fitness-kluby-kazakhstan">IntellectDialog, гайд для фитнес-клубов КЗ, 2026</a>;
+        персональные тренировки как допродажа 50–150 тыс. ₸/мес — <a href="https://nationalbusiness.kz/news/ekonomika-zozh-kak-kazahstan-platit-zamodu/">NationalBusiness.kz, 2026</a>;
+        CPM Instagram Stories 500–1 200 ₸ — <a href="https://iprod.kz">iprod.kz, 02.2026</a>; CPM Meta 1 000–3 000 ₸ — <a href="https://metrium.kz/blog/tpost/lnboz51yo1-stoimost-reklami-v-kazahstane-2026-tseni">metrium.kz, 2026</a>.
+        Доля установивших, снижение оттока 15 %, прирост ПТ 10 %, 2 сторис/мес, охват 150 и 6 месяцев дожития — допущения продавца; уточняются по итогам пилота.</p>
+    </div>
+  </details>
+
+  <div class="toast" id="toast">Скопировано</div>
+</div>
+
+<script>
+(function(){
+  var PKGS=[
+    {name:'Старт', once:1490000, monthly:99000},
+    {name:'Клуб', once:2990000, monthly:199000, main:true},
+    {name:'Эксклюзив', once:7900000, monthly:0, note:'6 мес поддержки включено, далее опц. 299 000 ₸/мес'}
+  ];
+  var IDS=['cards','check','churn','share','reduction','lifetime','ptSales','ptCheck','ptUplift','stories','views','cpm'];
+  var DEFAULTS={cards:1200,check:22000,churn:3,share:40,reduction:15,lifetime:6,ptSales:40,ptCheck:60000,ptUplift:10,stories:2,views:150,cpm:1000};
+  var $=function(id){return document.getElementById(id)};
+  var fmt=function(n){ if(!isFinite(n)) return '—'; return Math.round(n).toLocaleString('ru-RU')+' ₸'; };
+  var num=function(n,d){ return n.toLocaleString('ru-RU',{maximumFractionDigits:d==null?1:d}); };
+  var v=function(id){ var x=parseFloat(String($(id).value).replace(',','.')); return isFinite(x)&&x>=0?x:0; };
+  var last={};
+
+  function calc(){
+    var cards=v('cards'), check=v('check'), churn=v('churn')/100, share=v('share')/100, red=v('reduction')/100,
+        life=v('lifetime'), ptSales=v('ptSales'), ptCheck=v('ptCheck'), ptUp=v('ptUplift')/100,
+        stories=v('stories'), views=v('views'), cpm=v('cpm');
+    var users=cards*share;
+    var leaving=users*churn;
+    var saved=leaving*red;
+    var savedRev=saved*check*life;
+    var ptRev=ptSales*ptCheck*ptUp;
+    var storiesRev=users*stories*views/1000*cpm;
+    var month=savedRev+ptRev+storiesRev;
+    var year=month*12;
+
+    $('kSaved').textContent=fmt(savedRev);
+    $('kSavedSub').textContent='уходит '+num(leaving)+' чел./мес, удерживаем '+num(saved)+' × '+num(check,0)+' ₸ × '+num(life,0)+' мес';
+    $('kPt').textContent=fmt(ptRev);
+    $('kPtSub').textContent='+'+num(ptSales*ptUp)+' продаж ПТ в месяц';
+    $('kStories').textContent=fmt(storiesRev);
+    $('kStoriesSub').textContent=num(users*stories,0)+' сторис, ~'+num(users*stories*views,0)+' просмотров с логотипом клуба';
+    $('kMonth').textContent=fmt(month);
+    $('kUsers').textContent=num(users,0)+' клиентов в приложении';
+    $('kYear').textContent=fmt(year);
+
+    var club=PKGS[1];
+    var net=month-club.monthly;
+    var pb=$('kPayback'), pbn=$('kPaybackNote');
+    pb.className='';
+    if(net<=0){ pb.textContent='не окупается'; pb.className='bad'; pbn.textContent='эффект в месяц ('+fmt(month)+') меньше подписки '+fmt(club.monthly)+' — измените вводные или покажите Старт'; }
+    else{
+      var m=club.once/net;
+      pb.textContent=num(m,1)+' мес';
+      pb.className=m<=12?'ok':(m<=24?'warn':'bad');
+      pbn.textContent='чистый эффект после подписки '+fmt(net)+' в месяц; за 3 года: '+fmt(year*3-club.once-club.monthly*36);
+    }
+
+    var tb=$('pkg').querySelector('tbody'); tb.innerHTML='';
+    PKGS.forEach(function(p){
+      var y1=p.once+p.monthly*12;
+      var diff=year-y1;
+      var n2=month-p.monthly;
+      var pbm=n2>0?num(p.once/n2,1):'—';
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+(p.main?'<b>'+p.name+'</b>':p.name)+(p.note?'<br><span class="note">'+p.note+'</span>':'')+'</td>'
+        +'<td>'+fmt(p.once)+'</td><td>'+(p.monthly?fmt(p.monthly):'—')+'</td><td>'+fmt(y1)+'</td>'
+        +'<td class="'+(diff>=0?'ok':'bad')+'">'+(diff>=0?'+':'−')+fmt(Math.abs(diff))+'</td><td>'+pbm+'</td>';
+      tb.appendChild(tr);
+    });
+
+    last={users:users,leaving:leaving,saved:saved,savedRev:savedRev,ptRev:ptRev,storiesRev:storiesRev,month:month,year:year,net:net,
+          cards:cards,check:check,churn:churn,share:share,red:red,ptSales:ptSales,ptCheck:ptCheck,ptUp:ptUp,stories:stories,views:views,cpm:cpm,life:life};
+    try{ localStorage.setItem('roi_inputs', JSON.stringify(IDS.reduce(function(o,id){o[id]=$(id).value;return o;},{}))); }catch(e){}
+  }
+
+  function summaryText(){
+    var L=last, club=PKGS[1];
+    var lines=[
+      'Расчёт эффекта приложения клуба с AI-тренером (тенге, без НДС)',
+      'Вводные: '+num(L.cards,0)+' карт, чек '+num(L.check,0)+' ₸/мес, отток '+num(L.churn*100)+' %/мес, в приложении '+num(L.share*100,0)+' %, снижение оттока '+num(L.red*100,0)+' %, ПТ '+num(L.ptSales,0)+' × '+num(L.ptCheck,0)+' ₸ (+'+num(L.ptUp*100,0)+' %), сторис '+num(L.stories)+'/мес × '+num(L.views,0)+' просмотров, CPM '+num(L.cpm,0)+' ₸',
+      '',
+      'Сохранённая выручка: '+fmt(L.savedRev)+' в месяц (удерживаем '+num(L.saved)+' клиентов из '+num(L.leaving)+' уходящих)',
+      'Доп. выручка ПТ: '+fmt(L.ptRev)+' в месяц',
+      'Эквивалент рекламы от сторис: '+fmt(L.storiesRev)+' в месяц',
+      'Итого: '+fmt(L.month)+' в месяц, '+fmt(L.year)+' в год',
+      '',
+      'Пакет «Клуб»: '+fmt(club.once)+' разово + '+fmt(club.monthly)+'/мес → окупаемость '+(L.net>0?num(club.once/L.net,1)+' мес':'не окупается при этих вводных'),
+      'Старт: 1 490 000 ₸ + 99 000 ₸/мес · Эксклюзив: 7 900 000 ₸ (6 мес поддержки включено)',
+      '',
+      'Формулы и источники — внутри калькулятора. Допущения уточняются после пилота 45 дней.'
+    ];
+    return lines.join('\n');
+  }
+
+  function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(function(){el.classList.remove('show')},1600); }
+
+  $('copyBtn').addEventListener('click',function(){
+    var t=summaryText();
+    var done=function(){toast('Итог скопирован')};
+    var fallback=function(){
+      var ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); done(); }catch(e){ toast('Не удалось скопировать'); }
+      document.body.removeChild(ta);
+    };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,fallback); } else fallback();
+  });
+  $('printBtn').addEventListener('click',function(){ $('formulas').open=true; window.print(); });
+  $('resetBtn').addEventListener('click',function(){ IDS.forEach(function(id){$(id).value=DEFAULTS[id]}); calc(); });
+
+  try{
+    var saved=JSON.parse(localStorage.getItem('roi_inputs')||'null');
+    if(saved) IDS.forEach(function(id){ if(saved[id]!=null) $(id).value=saved[id]; });
+  }catch(e){}
+  IDS.forEach(function(id){ $(id).addEventListener('input',calc); });
+  $('date').textContent=new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  calc();
+})();
+</script>
+</body>
+</html>
