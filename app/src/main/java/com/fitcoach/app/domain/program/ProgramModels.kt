@@ -137,7 +137,7 @@ internal fun ex(
 
 /** Подсказки нагрузки. */
 internal object W {
-    const val BW = "б/в"
+    const val BW = "свой вес"
     const val LIGHT = "лёгкий"
     const val MEDIUM = "средний"
     const val HEAVY = "тяжёлый"

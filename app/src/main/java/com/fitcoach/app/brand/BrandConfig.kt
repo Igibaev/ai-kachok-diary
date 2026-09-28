@@ -27,6 +27,10 @@ object BrandConfig {
     val clubDataUrl: String = BuildConfig.CLUB_DATA_URL
     val newsUrl: String = BuildConfig.NEWS_URL
 
+    /** Ссылка на политику конфиденциальности (обязательна для Google Play при данных о здоровье). */
+    val privacyPolicyUrl: String = BuildConfig.PRIVACY_POLICY_URL
+    val hasPrivacyPolicy: Boolean get() = privacyPolicyUrl.isNotBlank()
+
     val aiProxyUrl: String = BuildConfig.AI_PROXY_URL.trimEnd('/')
     val aiProxyToken: String = BuildConfig.AI_PROXY_TOKEN
     val aiModel: String = BuildConfig.AI_MODEL.ifBlank { "claude-opus-5" }

@@ -93,7 +93,9 @@ class DashboardViewModel @Inject constructor(
                         profile = p,
                         program = program,
                         next = next,
-                        inProgress = todayWorkouts.firstOrNull { !it.isCompleted && !ProgramCatalog.isActivity(it) },
+                        // Не только за сегодня: начатая вечером и не завершённая тренировка после 00:00
+                        // иначе «терялась» — создавалась вторая, а старая навсегда оставалась «не завершена».
+                        inProgress = workouts.firstOrNull { !it.isCompleted && !ProgramCatalog.isActivity(it) },
                         completedToday = todayWorkouts.any { it.isCompleted },
                         nutritionSummary = nutrition,
                         waterToday = water,

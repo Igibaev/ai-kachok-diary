@@ -65,7 +65,9 @@ class AddFoodViewModel @Inject constructor(
 
     fun addFromTemplate(template: NutritionEntry, grams: Float, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val factor = grams / (template.grams ?: 100f)
+            // Порция 0 г (в базе или во вводе) дала бы Infinity/Int.MAX ккал и отрицательные суммы за день.
+            val baseGrams = template.grams?.takeIf { it > 0f } ?: 100f
+            val factor = (grams.takeIf { it > 0f } ?: baseGrams) / baseGrams
             val entry = template.copy(
                 id = UUID.randomUUID().toString(),
                 date = System.currentTimeMillis(),
@@ -256,7 +258,7 @@ private fun ManualFoodDialog(onDismiss: () -> Unit, onAdd: (String, Int, Float, 
             Button(
                 onClick = {
                     onAdd(name, calories.toIntOrNull() ?: 0, protein.toFloatOrNull() ?: 0f,
-                        carbs.toFloatOrNull() ?: 0f, fat.toFloatOrNull() ?: 0f, grams.toFloatOrNull() ?: 100f)
+                        carbs.toFloatOrNull() ?: 0f, fat.toFloatOrNull() ?: 0f, grams.toFloatOrNull()?.takeIf { it > 0f } ?: 100f)
                 },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent)

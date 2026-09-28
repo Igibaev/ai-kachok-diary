@@ -8,9 +8,15 @@ import com.fitcoach.app.domain.model.WaterEntry
 import com.fitcoach.app.domain.repository.UserRepository
 import com.fitcoach.app.domain.repository.WaterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.fitcoach.app.domain.util.DayBounds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -38,17 +44,26 @@ class WaterViewModel @Inject constructor(
     private val _state = MutableStateFlow(WaterUiState())
     val state = _state.asStateFlow()
 
+    /** Начало текущего дня; переоценивается раз в минуту, чтобы экран, оставленный через полночь, не показывал вчера. */
+    private val today = flow {
+        while (true) {
+            emit(DayBounds.startOfDay())
+            delay(60_000)
+        }
+    }.distinctUntilChanged()
+
     init {
-        val today = System.currentTimeMillis()
         viewModelScope.launch {
-            combine(
-                waterRepo.getEntriesForDate(today),
-                waterRepo.getTotalForDate(today),
-                userRepo.observeProfile()
-            ) { entries, total, profile -> Triple(entries, total, profile ?: UserProfile()) }
-                .collect { (entries, total, profile) ->
-                    _state.value = WaterUiState(entries, total, profile, loadWeek())
-                }
+            @OptIn(ExperimentalCoroutinesApi::class)
+            today.flatMapLatest { day ->
+                combine(
+                    waterRepo.getEntriesForDate(day),
+                    waterRepo.getTotalForDate(day),
+                    userRepo.observeProfile()
+                ) { entries, total, profile -> Triple(entries, total, profile ?: UserProfile()) }
+            }.collect { (entries, total, profile) ->
+                _state.value = WaterUiState(entries, total, profile, loadWeek())
+            }
         }
     }
 

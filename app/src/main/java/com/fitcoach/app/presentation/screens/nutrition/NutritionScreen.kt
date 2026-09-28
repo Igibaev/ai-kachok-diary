@@ -26,6 +26,9 @@ import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.*
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.fitcoach.app.domain.util.DayBounds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,13 +47,24 @@ class NutritionViewModel @Inject constructor(
     private val _state = MutableStateFlow(NutritionUiState())
     val state = _state.asStateFlow()
 
+    /** Начало текущего дня; переоценивается раз в минуту — VM вкладки живёт весь процесс, иначе после полуночи показывали бы вчера. */
+    private val today = flow {
+        while (true) {
+            emit(DayBounds.startOfDay())
+            delay(60_000)
+        }
+    }.distinctUntilChanged()
+
     init {
         viewModelScope.launch {
-            combine(
-                nutritionRepo.getNutritionSummaryForDate(System.currentTimeMillis()),
-                userRepo.observeProfile()
-            ) { summary, profile ->
-                NutritionUiState(summary, profile ?: UserProfile())
+            @OptIn(ExperimentalCoroutinesApi::class)
+            today.flatMapLatest { day ->
+                combine(
+                    nutritionRepo.getNutritionSummaryForDate(day),
+                    userRepo.observeProfile()
+                ) { summary, profile ->
+                    NutritionUiState(summary, profile ?: UserProfile())
+                }
             }.collect { _state.value = it }
         }
     }

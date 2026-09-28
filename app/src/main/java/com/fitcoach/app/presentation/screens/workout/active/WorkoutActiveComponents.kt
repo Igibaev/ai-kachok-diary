@@ -87,7 +87,7 @@ fun ExerciseCard(
                 )
                 if (exercise.tip.isNotEmpty()) {
                     Spacer(Modifier.height(2.dp))
-                    Text(exercise.tip, fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                    Text(exercise.tip.tr(), fontSize = 12.sp, color = FitCoachColors.TextMuted)
                 }
             }
             Box {
@@ -142,7 +142,9 @@ fun SetChip(set: ExerciseSet, onClick: () -> Unit, onUndo: () -> Unit, modifier:
             .background(bg)
             .border(1.dp, border, RoundedCornerShape(12.dp))
             .combinedClickable(
-                onClick = { if (!set.isDone) onClick() else onUndo() },
+                // Отмена — только долгим нажатием (как и говорит подсказка), чтобы случайный тап
+                // не стирал введённые вес и повторы.
+                onClick = { if (!set.isDone) onClick() },
                 onLongClick = { if (set.isDone) onUndo() }
             )
             .padding(vertical = 10.dp, horizontal = 8.dp),
@@ -155,7 +157,7 @@ fun SetChip(set: ExerciseSet, onClick: () -> Unit, onUndo: () -> Unit, modifier:
                 set.actualWeight?.let { stringResource(R.string.workout_set_result, reps, WorkoutTitles.formatWeight(it)) } ?: reps.toString()
             } else stringResource(R.string.workout_set_target, set.targetReps, set.targetWeight.tr())
             Text(sub, fontSize = 12.sp, color = if (set.isDone) FitCoachColors.Success.copy(alpha = 0.8f) else FitCoachColors.TextSecondary)
-            if (set.isDone) Text(stringResource(R.string.workout_set_undo), fontSize = 10.sp, color = FitCoachColors.TextMuted)
+            if (set.isDone) Text(stringResource(R.string.workout_set_undo), fontSize = 12.sp, color = FitCoachColors.TextMuted)
         }
     }
 }

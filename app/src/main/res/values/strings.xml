@@ -107,7 +107,12 @@
     <string name="onboarding_result_consult_button">Написать тренеру в WhatsApp</string>
     <string name="onboarding_result_important">Важно</string>
     <string name="onboarding_result_disclaimer">Приложение не заменяет врача. Рекомендации по тренировкам и питанию носят общий характер. При хронических заболеваниях, беременности, болях или травмах проконсультируйтесь с врачом и тренером клуба перед началом занятий.</string>
-    <string name="onboarding_result_consent">Согласен на обработку данных о здоровье (вес, ограничения, самочувствие) для персонализации программы. Данные хранятся на устройстве.</string>
+    <string name="onboarding_result_consent">Согласен на обработку данных о здоровье (вес, ограничения, самочувствие) для персонализации программы. Данные хранятся на устройстве; при использовании AI-чата обезличенный контекст (пол, возраст, вес, цели, ограничения) и текст сообщений передаются на сервер клуба и в Anthropic.</string>
+    <string name="onboarding_consent_hint">Чтобы продолжить, поставь галочку согласия выше</string>
+    <string name="privacy_policy_link">Политика конфиденциальности</string>
+    <string name="onboarding_age_range">Возраст от 14 до 90 лет</string>
+    <string name="onboarding_height_range">Рост от 120 до 230 см</string>
+    <string name="onboarding_weight_range">Вес от 35 до 250 кг</string>
 
     <!-- ===== Главная ===== -->
     <string name="dashboard_streak_start">Начни стрик</string>
@@ -134,6 +139,7 @@
     <string name="dashboard_greeting">%1$s, %2$s 👊</string>
     <string name="dashboard_default_name">Атлет</string>
     <string name="dashboard_member_card">Карта участника</string>
+    <string name="dashboard_food_add">+ добавить еду</string>
     <string name="dashboard_next_workout">Следующая тренировка</string>
     <string name="dashboard_workout_in_progress">Тренировка в процессе</string>
     <string name="dashboard_program">Программа</string>
@@ -197,7 +203,7 @@
     <string name="workout_summary_record">%1$s: %2$s кг</string>
     <string name="workout_summary_new_badge">Новый бейдж: %1$s</string>
     <string name="workout_summary_share">Поделиться в Stories</string>
-    <string name="workout_summary_share_soon">Скоро: карточка для Stories</string>
+    <string name="share_failed">Не удалось открыть «Поделиться». Попробуйте ещё раз.</string>
     <string name="workout_summary_home">На главную</string>
 
     <!-- ===== История / детали тренировки ===== -->
@@ -354,6 +360,7 @@
     <string name="club_book_service_text">Здравствуйте! Пишу из приложения %1$s. Интересует «%2$s». Расскажите, пожалуйста, подробнее.</string>
     <string name="club_promo_text">Здравствуйте! Пишу из приложения %1$s. Хочу воспользоваться акцией «%2$s».</string>
     <string name="club_price_free">Бесплатно</string>
+    <string name="club_services_tap_hint">Нажми на услугу — напишем в WhatsApp</string>
     <string name="club_price_tenge">%1$s ₸</string>
     <string name="qr_title">Карта участника</string>
     <string name="qr_code_description">QR-код участника</string>
@@ -383,7 +390,10 @@
     <string name="settings_fat_goal">Жиры (г/день)</string>
     <string name="settings_language">Язык / Тіл</string>
     <string name="settings_demo_data">Демо-данные</string>
-    <string name="settings_demo_hint">Для презентации: 3 недели тренировок, воды, питания и замеров. Профиль не меняется.</string>
+    <string name="settings_demo_hint">Для презентации: 3 недели тренировок, воды, питания и замеров. Текущие записи дневника будут удалены, профиль не меняется.</string>
+    <string name="settings_demo_title">Заменить историю демо-данными?</string>
+    <string name="settings_demo_text">Текущие тренировки, вода, питание и замеры будут удалены и заменены демо-данными за 3 недели. Профиль останется.</string>
+    <string name="settings_demo_confirm">Заменить</string>
     <string name="settings_demo_load">Загрузить 3 недели</string>
     <string name="settings_demo_clear">Очистить всё</string>
     <string name="settings_restart_onboarding">Пройти онбординг заново</string>
@@ -394,7 +404,7 @@
     <string name="settings_msg_recalculated">Цели пересчитаны — не забудь сохранить</string>
     <string name="settings_msg_saved">Сохранено</string>
     <string name="settings_msg_demo_loaded">Демо-данные загружены: 3 недели истории</string>
-    <string name="settings_msg_cleared">Все данные очищены</string>
+    <string name="settings_msg_cleared">Дневник и чат очищены. Профиль сохранён</string>
     <string name="settings_msg_failed">Не удалось: %1$s</string>
     <string name="settings_msg_error">ошибка</string>
     <string name="ai_settings_title">AI-ТРЕНЕР</string>
@@ -406,7 +416,7 @@
     <string name="ai_settings_mode_developer">Прямое подключение, ключ разработчика · %1$s</string>
     <string name="ai_settings_force_demo">Демо-режим AI (офлайн)</string>
     <string name="ai_settings_force_demo_hint">Принудительно использовать офлайн-ответы</string>
-    <string name="ai_settings_no_proxy">AI-сервис клуба не настроен — доступен только демо-режим</string>
+    <string name="ai_settings_no_proxy">Демо-режим: ответы работают офлайн. Подключение AI клуба — при запуске приложения для вашего клуба.</string>
     <string name="ai_settings_dev_key">Ключ разработчика (только debug)</string>
     <string name="ai_settings_dev_key_hint">Anthropic API key для прямого режима. Хранится в зашифрованном виде и не попадает в релизные сборки.</string>
     <string name="ai_settings_key_hide">Скрыть</string>
@@ -431,7 +441,7 @@
     <string name="share_sets">подходов</string>
     <string name="share_minutes">минут</string>
     <string name="share_volume">кг объём</string>
-    <string name="share_streak">тренировок подряд</string>
+    <string name="share_streak">недель подряд</string>
     <string name="share_records">🏆 Новых рекордов: %1$d</string>
     <string name="share_progress_title">Мой прогресс</string>
     <string name="share_progress_label">МОЙ ПРОГРЕСС</string>

@@ -8,7 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +43,7 @@ fun DashboardScreen(
     onOpenWater: () -> Unit = {},
     onOpenQrPass: () -> Unit = {},
     onOpenPrograms: () -> Unit = {},
+    onOpenNutrition: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -95,7 +96,7 @@ fun DashboardScreen(
                     Text(stringResource(R.string.dashboard_water_progress, state.waterToday, state.profile.waterGoalMl), fontSize = 12.sp, color = FitCoachColors.TextMuted)
                     Text(stringResource(R.string.dashboard_water_add), fontSize = 12.sp, color = FitCoachColors.Water, fontWeight = FontWeight.Medium)
                 }
-                FitCard(modifier = Modifier.weight(1f)) {
+                FitCard(modifier = Modifier.weight(1f).clickable { onOpenNutrition() }) {
                     SectionLabel(stringResource(R.string.dashboard_macros))
                     Spacer(Modifier.height(8.dp))
                     val nut = state.nutritionSummary
@@ -107,6 +108,8 @@ fun DashboardScreen(
                     LabeledProgressBar(nut.carbsG, p.carbsGoal.toFloat(), FitCoachColors.PhaseOrange, stringResource(R.string.dashboard_macros_carbs), stringResource(R.string.dashboard_macros_ratio_g, nut.carbsG.toInt(), p.carbsGoal))
                     Spacer(Modifier.height(6.dp))
                     LabeledProgressBar(nut.fatG, p.fatGoal.toFloat(), FitCoachColors.Warning, stringResource(R.string.dashboard_macros_fat), stringResource(R.string.dashboard_macros_ratio_g, nut.fatG.toInt(), p.fatGoal))
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.dashboard_food_add), fontSize = 12.sp, color = FitCoachColors.Accent, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -161,7 +164,7 @@ private fun Header(name: String, onOpenSettings: () -> Unit, onOpenQrPass: () ->
             Text(LocalDate.now().format(formatter).replaceFirstChar { it.uppercase() }, fontSize = 14.sp, color = FitCoachColors.TextMuted)
         }
         IconButton(onClick = onOpenQrPass) {
-            Icon(Icons.Default.CreditCard, contentDescription = stringResource(R.string.dashboard_member_card), tint = FitCoachColors.Accent)
+            Icon(Icons.Default.QrCode2, contentDescription = stringResource(R.string.dashboard_member_card), tint = FitCoachColors.Accent)
         }
         IconButton(onClick = onOpenSettings) {
             Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.common_settings), tint = FitCoachColors.TextMuted)

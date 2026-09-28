@@ -29,7 +29,6 @@ class DemoAiClient @Inject constructor(
     private val brand: AiBrand
 ) : AiClient {
 
-    override val label: String = "Демо (офлайн)"
 
     private val scenarios: List<DemoScenario> = DemoScenariosHealth.all + DemoScenariosLifestyle.all
     private val fallback: DemoScenario = DemoScenariosLifestyle.fallback

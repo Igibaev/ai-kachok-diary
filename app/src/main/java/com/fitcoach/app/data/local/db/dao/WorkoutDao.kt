@@ -9,10 +9,11 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
     fun getAllWorkouts(): Flow<List<WorkoutEntity>>
 
-    @Query("SELECT * FROM workouts WHERE date >= :startOfDay AND date < :endOfDay LIMIT 1")
+    /** За день может быть несколько записей (активность + программная): приоритет — завершённая программная. */
+    @Query("SELECT * FROM workouts WHERE date >= :startOfDay AND date < :endOfDay ORDER BY (planKey LIKE 'ACTIVITY_%') ASC, isCompleted DESC, date DESC LIMIT 1")
     suspend fun getWorkoutForDate(startOfDay: Long, endOfDay: Long): WorkoutEntity?
 
-    @Query("SELECT * FROM workouts WHERE date >= :startOfDay AND date < :endOfDay LIMIT 1")
+    @Query("SELECT * FROM workouts WHERE date >= :startOfDay AND date < :endOfDay ORDER BY (planKey LIKE 'ACTIVITY_%') ASC, isCompleted DESC, date DESC LIMIT 1")
     fun observeWorkoutForDate(startOfDay: Long, endOfDay: Long): Flow<WorkoutEntity?>
 
     @Query("SELECT * FROM workouts WHERE id = :id")

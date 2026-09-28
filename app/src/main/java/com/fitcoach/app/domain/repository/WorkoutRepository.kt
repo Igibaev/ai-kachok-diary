@@ -25,4 +25,6 @@ interface WorkoutRepository {
     suspend fun insertSets(sets: List<ExerciseSet>)
     /** Последний выполненный подход по упражнению (для подстановки прошлого веса). */
     suspend fun getLastResultForExercise(exerciseId: String): ExerciseSet?
+    /** То же по названию упражнения из других тренировок — переживает смену фазы (новые exerciseId). */
+    suspend fun getLastResultForExerciseName(exerciseName: String, excludeWorkoutId: String): ExerciseSet?
 }

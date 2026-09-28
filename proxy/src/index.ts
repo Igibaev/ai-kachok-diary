@@ -19,8 +19,11 @@ export interface Env {
   DAILY_LIMIT_PER_DEVICE?: string;
   /** Общий лимит запросов на всех в сутки (защита бюджета клуба). */
   DAILY_LIMIT_GLOBAL?: string;
-  /** KV для счётчиков лимитов (опционально; без KV лимиты не применяются). */
+  /** KV для счётчиков лимитов. ОБЯЗАТЕЛЕН: без привязки прокси отвечает 503 (fail-closed),
+   *  иначе извлекаемый из APK токен давал бы неограниченный расход ключа клуба. */
   RATE_LIMIT_KV?: KVNamespace;
+  /** Лимит запросов с одного IP в сутки (защита от смены X-Device-Id клиентом). */
+  DAILY_LIMIT_PER_IP?: string;
 }
 
 interface ChatMessage {
@@ -46,6 +49,10 @@ interface ChatResponse {
 const MAX_MESSAGES = 30;
 const MAX_MESSAGE_CHARS = 4000;
 const MAX_SYSTEM_CHARS = 12000;
+/** Тело запроса не больше 64 КБ: 30 сообщений × 4000 символов + промпт с запасом. */
+const MAX_BODY_BYTES = 64 * 1024;
+/** Идентификатор устройства — UUID/hex/base64url без экзотики; иначе ключ KV может превысить 512 байт. */
+const DEVICE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
@@ -82,7 +89,7 @@ function sanitize(req: ChatRequest): ChatRequest | string {
     system: req.system.slice(0, MAX_SYSTEM_CHARS),
     messages,
     locale: req.locale === "kk" ? "kk" : "ru",
-    deviceId: typeof req.deviceId === "string" ? req.deviceId.slice(0, 64) : undefined,
+    deviceId: typeof req.deviceId === "string" && DEVICE_ID_RE.test(req.deviceId) ? req.deviceId : undefined,
   };
 }
 
@@ -102,6 +109,26 @@ export default {
       return json({ error: "unauthorized" }, 401);
     }
 
+    // Fail-closed: без KV лимиты не работают, а токен приложения извлекаем из APK —
+    // лучше отказать, чем сжечь бюджет клуба.
+    if (!env.RATE_LIMIT_KV) {
+      return json({ error: "rate_limit_not_configured" }, 503);
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("application/json")) {
+      return json({ error: "unsupported_media_type" }, 415);
+    }
+    const contentLength = Number(request.headers.get("content-length") ?? "0");
+    if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_BODY_BYTES) {
+      return json({ error: "payload_too_large" }, 413);
+    }
+
+    const headerDeviceId = request.headers.get("x-device-id");
+    if (headerDeviceId !== null && !DEVICE_ID_RE.test(headerDeviceId)) {
+      return json({ error: "bad_device_id" }, 400);
+    }
+
     let parsed: ChatRequest | string;
     try {
       parsed = sanitize((await request.json()) as ChatRequest);
@@ -111,13 +138,25 @@ export default {
     if (typeof parsed === "string") return json({ error: parsed }, 400);
     const body = parsed;
 
-    const deviceId = request.headers.get("x-device-id") ?? body.deviceId ?? "anonymous";
+    const deviceId = headerDeviceId ?? body.deviceId ?? "anonymous";
+    if (!DEVICE_ID_RE.test(deviceId)) return json({ error: "bad_device_id" }, 400);
 
-    if (env.RATE_LIMIT_KV) {
+    {
       const perDevice = Number(env.DAILY_LIMIT_PER_DEVICE ?? "40");
       const global = Number(env.DAILY_LIMIT_GLOBAL ?? "5000");
       const day = todayKey();
-      const okDevice = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:${deviceId}`, perDevice);
+      let okDevice: boolean;
+      try {
+        okDevice = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:${deviceId}`, perDevice);
+        // Лимит по IP: deviceId контролируется клиентом и его можно менять на каждый запрос.
+        const ip = request.headers.get("cf-connecting-ip");
+        if (ip && okDevice) {
+          const perIp = Number(env.DAILY_LIMIT_PER_IP ?? String(perDevice * 5));
+          okDevice = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:ip:${ip}`, perIp);
+        }
+      } catch {
+        return json({ error: "rate_limit_unavailable" }, 503);
+      }
       if (!okDevice) {
         return json(
           {
@@ -127,7 +166,12 @@ export default {
           429,
         );
       }
-      const okGlobal = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:__global__`, global);
+      let okGlobal: boolean;
+      try {
+        okGlobal = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:__global__`, global);
+      } catch {
+        return json({ error: "rate_limit_unavailable" }, 503);
+      }
       if (!okGlobal) {
         return json(
           {

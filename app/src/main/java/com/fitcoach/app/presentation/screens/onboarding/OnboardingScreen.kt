@@ -108,11 +108,21 @@ fun OnboardingScreen(onFinished: () -> Unit, viewModel: OnboardingViewModel = hi
 
         Box(Modifier.padding(horizontal = 24.dp, vertical = 16.dp).navigationBarsPadding()) {
             if (step == OnboardingStep.RESULT) {
-                PrimaryButton(
-                    text = stringResource(if (state.saving) R.string.onboarding_saving else R.string.onboarding_start),
-                    enabled = state.canProceed && !state.saving,
-                    onClick = { viewModel.finish(onFinished) }
-                )
+                Column {
+                    PrimaryButton(
+                        text = stringResource(if (state.saving) R.string.onboarding_saving else R.string.onboarding_start),
+                        enabled = state.canProceed && !state.saving,
+                        onClick = { viewModel.finish(onFinished) }
+                    )
+                    // Чекбокс согласия — в конце длинного скролла; без подсказки серая кнопка выглядит тупиком.
+                    if (!state.canProceed) {
+                        Text(
+                            stringResource(R.string.onboarding_consent_hint),
+                            fontSize = 12.sp, color = FitCoachColors.TextSecondary,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        )
+                    }
+                }
             } else {
                 PrimaryButton(text = stringResource(R.string.common_next), enabled = state.canProceed, onClick = viewModel::next)
             }

@@ -163,7 +163,7 @@ fun WorkoutSummaryScreen(
             }
 
             Spacer(Modifier.height(8.dp))
-            val shareSoon = stringResource(R.string.workout_summary_share_soon)
+            val shareFailed = stringResource(R.string.share_failed)
             OutlinedButton(
                 onClick = {
                     shareViewModel.share(
@@ -175,7 +175,7 @@ fun WorkoutSummaryScreen(
                             streakWorkouts = summary.streakWeeks, personalRecords = summary.records.size,
                             referralCode = ""
                         )
-                    ) { scope.launch { snackbar.showSnackbar(shareSoon) } }
+                    ) { scope.launch { snackbar.showSnackbar(shareFailed) } }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.TextPrimary),

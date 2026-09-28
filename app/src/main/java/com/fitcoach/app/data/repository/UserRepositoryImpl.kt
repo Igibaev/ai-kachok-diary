@@ -9,8 +9,10 @@ import com.fitcoach.app.data.local.db.entity.UserProfileEntity
 import com.fitcoach.app.domain.model.*
 import com.fitcoach.app.domain.repository.UserRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import javax.inject.Inject
 
@@ -49,11 +51,15 @@ class UserRepositoryImpl @Inject constructor(
         dao.insertProfile(withMember.toEntity())
     }
 
-    override suspend fun getApiKey(): String =
-        securePrefs.getString(KEY_API, "") ?: ""
+    // Инициализация MasterKey/Tink и расшифровка — на IO; повреждённый keyset (например, после восстановления
+    // файла без ключа Keystore) даёт SecurityException/AEADBadTagException — не роняем ViewModel.
+    override suspend fun getApiKey(): String = withContext(Dispatchers.IO) {
+        runCatching { securePrefs.getString(KEY_API, "") ?: "" }.getOrDefault("")
+    }
 
-    override suspend fun saveApiKey(key: String) =
-        securePrefs.edit().putString(KEY_API, key.trim()).apply()
+    override suspend fun saveApiKey(key: String) = withContext(Dispatchers.IO) {
+        runCatching { securePrefs.edit().putString(KEY_API, key.trim()).apply() }.getOrDefault(Unit)
+    }
 
     override suspend fun getDeviceId(): String {
         plainPrefs.getString(KEY_DEVICE_ID, null)?.let { return it }

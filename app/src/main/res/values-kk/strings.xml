@@ -32,8 +32,8 @@
         <item quantity="other">қатарынан %d апта</item>
     </plurals>
     <plurals name="plural_weeks_in_row_label">
-        <item quantity="one">апта қатарынан</item>
-        <item quantity="other">апта қатарынан</item>
+        <item quantity="one">қатарынан апта</item>
+        <item quantity="other">қатарынан апта</item>
     </plurals>
 
     <!-- ===== Нижняя навигация ===== -->
@@ -53,7 +53,7 @@
     <!-- ===== Онбординг ===== -->
     <string name="onboarding_step_language">Тіл / Язык</string>
     <string name="onboarding_step_name">Атың кім?</string>
-    <string name="onboarding_step_sex_age">Жынысы мен жасы</string>
+    <string name="onboarding_step_sex_age">Жынысың мен жасың</string>
     <string name="onboarding_step_body">Бой мен салмақ</string>
     <string name="onboarding_step_goal">Сенің мақсатың</string>
     <string name="onboarding_step_level">Дайындық деңгейі</string>
@@ -101,7 +101,12 @@
     <string name="onboarding_result_consult_button">Жаттықтырушыға WhatsApp-қа жазу</string>
     <string name="onboarding_result_important">Маңызды</string>
     <string name="onboarding_result_disclaimer">Қолданба дәрігерді алмастырмайды. Жаттығу мен тамақтану бойынша ұсыныстар жалпы сипатта. Созылмалы аурулар, жүктілік, ауырсыну немесе жарақат болса, сабақты бастар алдында дәрігермен және клуб жаттықтырушысымен кеңесіңіз.</string>
-    <string name="onboarding_result_consent">Бағдарламаны дербестендіру үшін денсаулық деректерін (салмақ, шектеулер, көңіл-күй) өңдеуге келісемін. Деректер құрылғыда сақталады.</string>
+    <string name="onboarding_result_consent">Бағдарламаны дербестендіру үшін денсаулық деректерін (салмақ, шектеулер, көңіл-күй) өңдеуге келісемін. Деректер құрылғыда сақталады; AI-чатты пайдаланғанда жасырын контекст (жыныс, жас, салмақ, мақсат, шектеулер) және хабарлама мәтіні клуб серверіне және Anthropic-ке жіберіледі.</string>
+    <string name="onboarding_consent_hint">Жалғастыру үшін жоғарыдағы келісім белгісін қой</string>
+    <string name="privacy_policy_link">Құпиялылық саясаты</string>
+    <string name="onboarding_age_range">Жас 14-тен 90-ға дейін</string>
+    <string name="onboarding_height_range">Бой 120-дан 230 см-ге дейін</string>
+    <string name="onboarding_weight_range">Салмақ 35-тен 250 кг-ға дейін</string>
 
     <!-- ===== Главная ===== -->
     <string name="dashboard_streak_start">Серияны баста</string>
@@ -109,7 +114,7 @@
     <string name="dashboard_water">Су</string>
     <string name="dashboard_water_progress">%1$d / %2$d мл</string>
     <string name="dashboard_water_add">+ қосу</string>
-    <string name="dashboard_macros">КБЖУ</string>
+    <string name="dashboard_macros">Калория және АКМ</string>
     <string name="dashboard_macros_kcal">Ккал</string>
     <string name="dashboard_macros_protein">Ақуыз</string>
     <string name="dashboard_macros_carbs">Көмірсулар</string>
@@ -118,7 +123,7 @@
     <string name="dashboard_macros_ratio_g">%1$d/%2$d г</string>
     <string name="dashboard_ai_coach">AI-жаттықтырушы %1$s</string>
     <string name="dashboard_ai_coach_hint">Жаттығу, тамақтану немесе техника туралы сұра</string>
-    <string name="dashboard_stat_total">барлық жаттығу</string>
+    <string name="dashboard_stat_total">жалпы жаттығу</string>
     <string name="dashboard_stat_week">бағдарлама аптасы</string>
     <string name="dashboard_stat_week_value">%1$d/12</string>
     <string name="dashboard_greeting_morning">Қайырлы таң</string>
@@ -128,6 +133,7 @@
     <string name="dashboard_greeting">%1$s, %2$s 👊</string>
     <string name="dashboard_default_name">Атлет</string>
     <string name="dashboard_member_card">Мүше картасы</string>
+    <string name="dashboard_food_add">+ тағам қосу</string>
     <string name="dashboard_next_workout">Келесі жаттығу</string>
     <string name="dashboard_workout_in_progress">Жаттығу жүріп жатыр</string>
     <string name="dashboard_program">Бағдарлама</string>
@@ -178,8 +184,8 @@
     <string name="workout_feedback_pain">Жаттығудан кейін арқадағы жайсыздық</string>
     <string name="workout_feedback_pain_value">%1$d / 10</string>
     <string name="workout_feedback_pain_none">Жоқ</string>
-    <string name="workout_feedback_pain_strong">Күшті ауырсыну</string>
-    <string name="workout_feedback_pain_warning">Күшті ауырсыну болса — үзіліс жаса және дәрігерге немесе клуб жаттықтырушысына жүгін.</string>
+    <string name="workout_feedback_pain_strong">Қатты ауырсыну</string>
+    <string name="workout_feedback_pain_warning">Қатты ауырсыну болса — үзіліс жаса және дәрігерге немесе клуб жаттықтырушысына жүгін.</string>
     <string name="workout_summary_title">Жаттығу аяқталды!</string>
     <string name="workout_summary_min">мин</string>
     <string name="workout_summary_sets">тәсіл</string>
@@ -191,7 +197,7 @@
     <string name="workout_summary_record">%1$s: %2$s кг</string>
     <string name="workout_summary_new_badge">Жаңа бейдж: %1$s</string>
     <string name="workout_summary_share">Stories-те бөлісу</string>
-    <string name="workout_summary_share_soon">Жақында: Stories үшін карточка</string>
+    <string name="share_failed">«Бөлісу» ашылмады. Қайталап көріңіз.</string>
     <string name="workout_summary_home">Басты бетке</string>
 
     <!-- ===== История / детали тренировки ===== -->
@@ -222,14 +228,14 @@
     <string name="programs_switch_title">«%1$s» бағдарламасына ауысу керек пе?</string>
     <string name="programs_switch_text">Апта есебі қайта басталады, орындалған жаттығулар тарихта қалады. Аптасына күн: %1$d.</string>
     <string name="programs_select">Таңдау</string>
-    <string name="programs_days_per_week">апт. %1$d күн</string>
+    <string name="programs_days_per_week">аптасына %1$d күн</string>
     <string name="programs_for_you">Саған</string>
     <string name="programs_phases">Кезеңдер: %1$s</string>
     <string name="programs_current">Ағымдағы бағдарлама</string>
 
     <!-- ===== Питание ===== -->
     <string name="nutrition_title">Тамақтану</string>
-    <string name="nutrition_daily">КҮНДІК КБЖУ</string>
+    <string name="nutrition_daily">КҮНДІК КАЛОРИЯ · АКМ</string>
     <string name="nutrition_kcal">ккал</string>
     <string name="nutrition_protein_g">ақуыз г</string>
     <string name="nutrition_carbs">Көмірсулар</string>
@@ -313,12 +319,12 @@
     <string name="chat_prompt_eat_before_sleep">Ұйқы алдында жеуге бола ма?</string>
     <string name="chat_prompt_sleep">Ұйқыны қалай жақсартуға болады?</string>
     <string name="chat_prompt_eat_now">Қазір не жеуге болады?</string>
-    <string name="chat_prompt_machine_busy">Тренажер бос емес, неге ауыстыруға болады?</string>
+    <string name="chat_prompt_machine_busy">Тренажер бос емес, немен ауыстыруға болады?</string>
     <string name="chat_prompt_back_pain">Арқам ауырады</string>
-    <string name="chat_prompt_motivate">Мені мотивацияла</string>
+    <string name="chat_prompt_motivate">Мені жігерлендір</string>
     <string name="chat_prompt_book_trainer">Мені жаттықтырушыға жазып қой</string>
     <string name="ai_mode_demo">Демо-режим</string>
-    <string name="ai_mode_club">Клуб AI-ы</string>
+    <string name="ai_mode_club">Клубтың AI-ы</string>
     <string name="ai_mode_developer">Әзірлеуші</string>
 
     <!-- ===== Клуб ===== -->
@@ -348,6 +354,7 @@
     <string name="club_book_service_text">Сәлеметсіз бе! %1$s қолданбасынан жазып отырмын. «%2$s» қызметі қызықтырады. Толығырақ айтып беріңізші.</string>
     <string name="club_promo_text">Сәлеметсіз бе! %1$s қолданбасынан жазып отырмын. «%2$s» акциясын пайдаланғым келеді.</string>
     <string name="club_price_free">Тегін</string>
+    <string name="club_services_tap_hint">Қызметті бас — WhatsApp-қа жазамыз</string>
     <string name="club_price_tenge">%1$s ₸</string>
     <string name="qr_title">Мүше картасы</string>
     <string name="qr_code_description">Мүшенің QR-коды</string>
@@ -377,7 +384,10 @@
     <string name="settings_fat_goal">Майлар (г/күн)</string>
     <string name="settings_language">Тіл / Язык</string>
     <string name="settings_demo_data">Демо-деректер</string>
-    <string name="settings_demo_hint">Презентация үшін: 3 апталық жаттығу, су, тамақтану және өлшемдер. Профиль өзгермейді.</string>
+    <string name="settings_demo_hint">Презентация үшін: 3 апталық жаттығу, су, тамақтану және өлшемдер. Күнделіктің қазіргі жазбалары жойылады, профиль өзгермейді.</string>
+    <string name="settings_demo_title">Тарихты демо-деректермен ауыстыру керек пе?</string>
+    <string name="settings_demo_text">Қазіргі жаттығулар, су, тамақтану және өлшемдер жойылып, 3 апталық демо-деректермен ауыстырылады. Профиль қалады.</string>
+    <string name="settings_demo_confirm">Ауыстыру</string>
     <string name="settings_demo_load">3 аптаны жүктеу</string>
     <string name="settings_demo_clear">Барлығын өшіру</string>
     <string name="settings_restart_onboarding">Онбордингтен қайта өту</string>
@@ -388,7 +398,7 @@
     <string name="settings_msg_recalculated">Мақсаттар қайта есептелді — сақтауды ұмытпа</string>
     <string name="settings_msg_saved">Сақталды</string>
     <string name="settings_msg_demo_loaded">Демо-деректер жүктелді: 3 апталық тарих</string>
-    <string name="settings_msg_cleared">Барлық деректер өшірілді</string>
+    <string name="settings_msg_cleared">Күнделік пен чат өшірілді. Профиль сақталды</string>
     <string name="settings_msg_failed">Орындалмады: %1$s</string>
     <string name="settings_msg_error">қате</string>
     <string name="ai_settings_title">AI-ЖАТТЫҚТЫРУШЫ</string>
@@ -400,7 +410,7 @@
     <string name="ai_settings_mode_developer">Тікелей қосылу, әзірлеуші кілті · %1$s</string>
     <string name="ai_settings_force_demo">AI демо-режимі (офлайн)</string>
     <string name="ai_settings_force_demo_hint">Офлайн жауаптарды мәжбүрлі пайдалану</string>
-    <string name="ai_settings_no_proxy">Клубтың AI-сервисі бапталмаған — тек демо-режим қолжетімді</string>
+    <string name="ai_settings_no_proxy">Демо-режим: жауаптар офлайн жұмыс істейді. Клуб AI-ын қосу — қосымша сіздің клубыңыз үшін іске қосылғанда.</string>
     <string name="ai_settings_dev_key">Әзірлеуші кілті (тек debug)</string>
     <string name="ai_settings_dev_key_hint">Тікелей режимге арналған Anthropic API key. Шифрланған түрде сақталады және релиз құрастырылымдарына түспейді.</string>
     <string name="ai_settings_key_hide">Жасыру</string>
@@ -425,7 +435,7 @@
     <string name="share_sets">тәсіл</string>
     <string name="share_minutes">минут</string>
     <string name="share_volume">кг көлем</string>
-    <string name="share_streak">жаттығу қатарынан</string>
+    <string name="share_streak">қатарынан апта</string>
     <string name="share_records">🏆 Жаңа рекордтар: %1$d</string>
     <string name="share_progress_title">Менің прогресім</string>
     <string name="share_progress_label">МЕНІҢ ПРОГРЕСІМ</string>

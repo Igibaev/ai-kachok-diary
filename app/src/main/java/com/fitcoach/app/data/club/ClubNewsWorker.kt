@@ -10,6 +10,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.fitcoach.app.R
+import com.fitcoach.app.domain.repository.UserRepository
+import com.fitcoach.app.l10n.withLanguage
 import com.fitcoach.app.workers.Notifications
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -20,18 +22,21 @@ import java.util.concurrent.TimeUnit
 class ClubNewsWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
-    private val clubRepository: ClubRepository
+    private val clubRepository: ClubRepository,
+    private val userRepository: UserRepository
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         val fresh = runCatching { clubRepository.refresh() }.getOrElse { return Result.retry() }
+        // Контекст воркера не знает про AppCompatDelegate-локаль (API < 33) — берём язык из профиля, как другие воркеры.
+        val res = context.withLanguage(runCatching { userRepository.getProfile()?.language }.getOrNull() ?: "")
         fresh.take(MAX_NOTIFICATIONS).forEachIndexed { index, promo ->
             Notifications.show(
                 context,
                 Notifications.CHANNEL_CLUB,
                 ID_BASE + index,
-                context.getString(R.string.notif_promo_title, promo.title),
-                promo.text.ifBlank { context.getString(R.string.notif_promo_text) }
+                res.getString(R.string.notif_promo_title, promo.title),
+                promo.text.ifBlank { res.getString(R.string.notif_promo_text) }
             )
         }
         return Result.success()

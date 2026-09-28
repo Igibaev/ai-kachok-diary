@@ -8,6 +8,7 @@ import com.fitcoach.app.domain.model.Restriction
 import com.fitcoach.app.domain.model.Sex
 import com.fitcoach.app.domain.model.UserProfile
 import com.fitcoach.app.domain.model.Workout
+import com.fitcoach.app.domain.program.WorkoutTitles
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -105,10 +106,13 @@ class BuildSystemPromptUseCase @Inject constructor(
         }
     }
 
+    /** Название тренировки + фаза: одна фаза содержит 3–4 разных шаблона (верх/низ/full-body), модель должна их различать. */
     private fun workoutTitle(w: Workout): String = when {
         w.planKey.startsWith("ACTIVITY_") -> activityTitle(w.planKey)
-        w.phaseName.isNotBlank() -> w.phaseName
-        else -> w.planKey
+        else -> {
+            val title = WorkoutTitles.titleFor(w)
+            if (w.phaseName.isNotBlank() && title != w.phaseName) "$title · ${w.phaseName}" else title.ifBlank { w.planKey }
+        }
     }
 
     private fun activityTitle(planKey: String): String = when (planKey.removePrefix("ACTIVITY_")) {

@@ -52,11 +52,11 @@ data class ClubService(
     val unit: String = "",
     val description: String? = null
 ) {
-    /** «25 000 ₸ / мес» — формат для UI. */
+    /** «25 000 ₸ / мес» — формат цены для UI; для бесплатной услуги (price <= 0) UI берёт R.string.club_price_free. */
     val priceLabel: String
         get() {
             val digits = "%,d".format(price).replace(',', ' ')
-            val base = if (price <= 0) "Бесплатно" else "$digits ₸"
+            val base = "$digits ₸"
             return if (unit.isBlank() || price <= 0) base else "$base / $unit"
         }
 }

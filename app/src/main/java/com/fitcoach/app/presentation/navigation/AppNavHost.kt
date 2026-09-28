@@ -2,7 +2,6 @@ package com.fitcoach.app.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,7 +26,8 @@ import com.fitcoach.app.presentation.screens.workout.history.WorkoutHistoryScree
 fun AppNavHost(
     navController: NavHostController,
     startDestination: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOnboardingFinished: () -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -37,6 +37,7 @@ fun AppNavHost(
         composable(Screen.Onboarding.route) {
             OnboardingScreen(
                 onFinished = {
+                    onOnboardingFinished()
                     navController.navigate(Screen.Dashboard.route) {
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
@@ -51,7 +52,15 @@ fun AppNavHost(
                 onOpenSettings = { navController.navigate(Screen.Settings.route) },
                 onOpenWater = { navController.navigate(Screen.Water.route) },
                 onOpenQrPass = { navController.navigate(Screen.QrPass.route) },
-                onOpenPrograms = { navController.navigate(Screen.Programs.route) }
+                onOpenPrograms = { navController.navigate(Screen.Programs.route) },
+                onOpenNutrition = {
+                    // Как переключение вкладки в нижней навигации (см. MainActivity).
+                    navController.navigate(Screen.Nutrition.route) {
+                        popUpTo(Screen.Dashboard.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
 
@@ -63,9 +72,13 @@ fun AppNavHost(
             WorkoutActiveScreen(
                 workoutId = workoutId,
                 onFinished = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
-                        launchSingleTop = true
+                    // Dashboard всегда есть в стеке под тренировкой: возвращаемся к нему,
+                    // не создавая новый экземпляр (иначе Back открывал бы завершённую тренировку).
+                    if (!navController.popBackStack(Screen.Dashboard.route, inclusive = false)) {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 },
                 onOpenChat = { navController.navigate(Screen.Chat.route) }
@@ -134,7 +147,9 @@ fun AppNavHost(
                 onBack = { navController.popBackStack() },
                 onRestartOnboarding = {
                     navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                        // В первой сессии start destination графа — Onboarding, которого уже нет в стеке;
+                        // чистим стек по маршруту Dashboard (он всегда в корне после онбординга).
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
                     }
                 }
             )

@@ -41,9 +41,10 @@ class WorkoutReminderWorker @AssistedInject constructor(
         val todayStart = DayBounds.startOfDay()
         if (completed.any { it.date >= todayStart }) return Result.success()
 
-        val twoDaysAgo = System.currentTimeMillis() - 2 * 24 * 60 * 60 * 1000L
+        // «2+ дня назад» — по календарным дням (как стрик и проверка «сегодня» выше), а не скользящие 48 ч:
+        // иначе тренировка позавчера вечером при запуске в 18:00 ещё не считалась бы пропуском.
         val last = completed.maxOfOrNull { it.date }
-        if (last != null && last > twoDaysAgo) return Result.success()
+        if (last != null && DayBounds.startOfDay(last) > todayStart - 2 * 24 * 60 * 60 * 1000L) return Result.success()
 
         val program = ProgramCatalog.getOrDefault(profile.programKey)
         val next = ProgramCatalog.nextWorkout(program, completed, profile.daysPerWeek)

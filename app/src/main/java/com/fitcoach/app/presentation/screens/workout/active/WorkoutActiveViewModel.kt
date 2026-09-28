@@ -21,7 +21,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -99,27 +101,39 @@ data class WorkoutActiveUiState(
 class WorkoutActiveViewModel @Inject constructor(
     private val workoutRepo: WorkoutRepository,
     private val userRepo: UserRepository,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val workoutId: String = checkNotNull(savedStateHandle["workoutId"])
 
-    private val _state = MutableStateFlow(WorkoutActiveUiState())
+    private val _state = MutableStateFlow(
+        WorkoutActiveUiState(
+            // Фаза переживает смерть процесса (пользователь ушёл в музыку/камеру на полчаса).
+            phase = savedStateHandle.get<String>(KEY_PHASE)?.let { runCatching { WorkoutPhase.valueOf(it) }.getOrNull() }
+                ?: WorkoutPhase.Warmup
+        )
+    )
     val state = _state.asStateFlow()
 
     private var restJob: Job? = null
     private var elapsedJob: Job? = null
-    private val startedAt = System.currentTimeMillis()
+    /** Момент старта: из SavedStateHandle (process death) или workout.date (см. loadWorkout), иначе — сейчас. */
+    private var startedAt: Long = savedStateHandle[KEY_STARTED_AT] ?: System.currentTimeMillis()
+    /** Абсолютный момент конца отдыха — остаток восстанавливается после пересоздания VM. */
+    private var restEndsAt: Long = 0L
     private var template: WorkoutTemplate? = null
     private var profile: UserProfile = UserProfile()
 
-    /** «Прошлый раз» по exerciseId: запрашиваем один раз, иначе после первого подхода в этой тренировке
+    /** «Прошлый раз» по названию упражнения: запрашиваем один раз, иначе после первого подхода в этой тренировке
      *  последним «выполненным» становится наш же подход и подсказка пропадает. */
     private val lastResultCache = HashMap<String, ExerciseSet?>()
 
     init {
         loadWorkout()
         startElapsedTimer()
+        viewModelScope.launch {
+            _state.map { it.phase }.distinctUntilChanged().collect { savedStateHandle[KEY_PHASE] = it.name }
+        }
     }
 
     private fun startElapsedTimer() {
@@ -137,6 +151,14 @@ class WorkoutActiveViewModel @Inject constructor(
             val workout = workoutRepo.getWorkoutById(workoutId)
             template = workout?.let { ProgramCatalog.findTemplate(it.programKey, it.planKey) }
             val title = workout?.let { WorkoutTitles.titleFor(it) } ?: ""
+            if (!savedStateHandle.contains(KEY_STARTED_AT)) {
+                // «Продолжить» с главной или новая VM: старт — момент создания тренировки, если это было недавно
+                // (иначе, при возобновлении на следующий день, длительность была бы в сутках).
+                val now = System.currentTimeMillis()
+                val created = workout?.date ?: now
+                startedAt = if (now - created in 0..MAX_RESUME_GAP_MS) created else now
+                savedStateHandle[KEY_STARTED_AT] = startedAt
+            }
             _state.update {
                 it.copy(
                     workout = workout, title = title, askPain = Restriction.BACK in profile.restrictions,
@@ -144,6 +166,12 @@ class WorkoutActiveViewModel @Inject constructor(
                     cooldownItems = template?.cooldown ?: emptyList()
                 )
             }
+            // Завершённая тренировка (фаза Summary до смерти процесса) — пересобираем итоги.
+            if (workout != null && workout.isCompleted && _state.value.phase == WorkoutPhase.Summary) {
+                val summary = buildSummary(workout)
+                _state.update { it.copy(summary = summary) }
+            }
+            restoreRest()
             workoutRepo.getSetsForWorkout(workoutId).collect { sets ->
                 val exercises = buildExercises(sets)
                 _state.update {
@@ -194,8 +222,10 @@ class WorkoutActiveViewModel @Inject constructor(
 
     fun openSetInput(set: ExerciseSet) {
         viewModelScope.launch {
-            val last = lastResultCache.getOrPut(set.exerciseId) {
-                workoutRepo.getLastResultForExercise(set.exerciseId)?.takeIf { it.workoutId != workoutId }
+            // По названию, а не по exerciseId: id уникальны на шаблон (s1a_1 / s3a_1), и на смене фазы
+            // подсказка веса иначе пропадала бы именно тогда, когда нужна прогрессия.
+            val last = lastResultCache.getOrPut(set.exerciseName) {
+                workoutRepo.getLastResultForExerciseName(set.exerciseName, workoutId)
             }
             // Если в этой тренировке уже есть выполненный подход этого упражнения — берём его вес.
             val inWorkout = _state.value.exercises.firstOrNull { it.exerciseId == set.exerciseId }
@@ -261,16 +291,23 @@ class WorkoutActiveViewModel @Inject constructor(
 
     // ---------- Отдых ----------
 
-    private fun startRest(totalSeconds: Int, nextExerciseName: String?, nextSetNumber: Int) {
+    private fun startRest(totalSeconds: Int, nextExerciseName: String?, nextSetNumber: Int, remainingSeconds: Int = totalSeconds) {
         restJob?.cancel()
-        _state.update { it.copy(rest = RestState(totalSeconds, totalSeconds, nextExerciseName, nextSetNumber)) }
+        restEndsAt = System.currentTimeMillis() + remainingSeconds * 1000L
+        savedStateHandle[KEY_REST_ENDS_AT] = restEndsAt
+        savedStateHandle[KEY_REST_TOTAL] = totalSeconds
+        savedStateHandle[KEY_REST_NEXT_NAME] = nextExerciseName
+        savedStateHandle[KEY_REST_NEXT_SET] = nextSetNumber
+        _state.update { it.copy(rest = RestState(remainingSeconds, totalSeconds, nextExerciseName, nextSetNumber)) }
         restJob = viewModelScope.launch {
             while (isActive) {
                 delay(1000)
                 val rest = _state.value.rest ?: break
-                val remaining = rest.remainingSeconds - 1
+                // От абсолютного времени, а не декрементом: пауза процесса/дрожание delay не «замораживают» таймер.
+                val remaining = ((restEndsAt - System.currentTimeMillis() + 999) / 1000).toInt()
                 if (remaining <= 0) {
                     _state.update { it.copy(rest = rest.copy(remainingSeconds = 0, finished = true)) }
+                    clearSavedRest()
                     delay(1500)
                     _state.update { it.copy(rest = null) }
                     break
@@ -280,17 +317,39 @@ class WorkoutActiveViewModel @Inject constructor(
         }
     }
 
+    /** После пересоздания VM: если отдых ещё не закончился — продолжаем с остатка. */
+    private fun restoreRest() {
+        val endsAt: Long = savedStateHandle[KEY_REST_ENDS_AT] ?: return
+        val remaining = ((endsAt - System.currentTimeMillis() + 999) / 1000).toInt()
+        if (remaining <= 0) { clearSavedRest(); return }
+        startRest(
+            totalSeconds = savedStateHandle[KEY_REST_TOTAL] ?: remaining,
+            nextExerciseName = savedStateHandle[KEY_REST_NEXT_NAME],
+            nextSetNumber = savedStateHandle[KEY_REST_NEXT_SET] ?: 1,
+            remainingSeconds = remaining
+        )
+    }
+
+    private fun clearSavedRest() {
+        restEndsAt = 0L
+        savedStateHandle.remove<Long>(KEY_REST_ENDS_AT)
+    }
+
     fun adjustRest(deltaSeconds: Int) {
         _state.update { s ->
             val rest = s.rest ?: return@update s
             val remaining = (rest.remainingSeconds + deltaSeconds).coerceAtLeast(5)
             val total = maxOf(rest.totalSeconds, remaining)
+            restEndsAt = System.currentTimeMillis() + remaining * 1000L
+            savedStateHandle[KEY_REST_ENDS_AT] = restEndsAt
+            savedStateHandle[KEY_REST_TOTAL] = total
             s.copy(rest = rest.copy(remainingSeconds = remaining, totalSeconds = total))
         }
     }
 
     fun skipRest() {
         restJob?.cancel()
+        clearSavedRest()
         _state.update { it.copy(rest = null) }
     }
 
@@ -304,7 +363,7 @@ class WorkoutActiveViewModel @Inject constructor(
         viewModelScope.launch {
             val workout = _state.value.workout ?: return@launch
             elapsedJob?.cancel()
-            val durationMinutes = ((System.currentTimeMillis() - startedAt) / 60_000).toInt().coerceAtLeast(1)
+            val durationMinutes = ((System.currentTimeMillis() - startedAt) / 60_000).toInt().coerceIn(1, MAX_DURATION_MINUTES)
             val updated = workout.copy(isCompleted = true, rpe = rpe, painLevel = painLevel, durationMinutes = durationMinutes)
             workoutRepo.updateWorkout(updated)
             val summary = buildSummary(updated)
@@ -318,23 +377,22 @@ class WorkoutActiveViewModel @Inject constructor(
         val completed = workoutRepo.observeCompletedWorkouts().first()
         val previous = completed.filter { it.id != workoutId }
 
-        // Рекорды: максимальный вес в упражнении выше прошлого лучшего (по той же тренировке программы).
+        // Рекорды: максимальный вес в упражнении выше прошлого лучшего — по названию упражнения во всех
+        // прошлых тренировках (id и planKey меняются от фазы к фазе, упражнение — то же).
         val bestBefore = HashMap<String, Float>()
         var volumeBefore = 0
         for (w in previous) {
             val ws = workoutRepo.getSetsForWorkoutSync(w.id)
             volumeBefore += WorkoutTitles.volumeKg(ws)
-            if (w.planKey == workout.planKey) {
-                ws.filter { it.isDone && it.actualWeight != null }.forEach { s ->
-                    val key = s.exerciseId
-                    bestBefore[key] = maxOf(bestBefore[key] ?: 0f, s.actualWeight!!)
-                }
+            ws.filter { it.isDone && it.actualWeight != null }.forEach { s ->
+                val key = s.exerciseName
+                bestBefore[key] = maxOf(bestBefore[key] ?: 0f, s.actualWeight!!)
             }
         }
         val records = sets.filter { it.isDone && it.actualWeight != null }
-            .groupBy { it.exerciseId }
-            .mapNotNull { (id, list) ->
-                val prev = bestBefore[id] ?: return@mapNotNull null
+            .groupBy { it.exerciseName }
+            .mapNotNull { (name, list) ->
+                val prev = bestBefore[name] ?: return@mapNotNull null
                 val now = list.maxOf { it.actualWeight!! }
                 if (now > prev) PersonalRecord(list.first().exerciseName, now) else null
             }
@@ -365,5 +423,17 @@ class WorkoutActiveViewModel @Inject constructor(
         super.onCleared()
         restJob?.cancel()
         elapsedJob?.cancel()
+    }
+
+    private companion object {
+        const val KEY_STARTED_AT = "startedAt"
+        const val KEY_PHASE = "phase"
+        const val KEY_REST_ENDS_AT = "restEndsAt"
+        const val KEY_REST_TOTAL = "restTotal"
+        const val KEY_REST_NEXT_NAME = "restNextName"
+        const val KEY_REST_NEXT_SET = "restNextSet"
+        /** Если тренировку создали давно (возобновление на следующий день) — считаем длительность с текущего открытия. */
+        const val MAX_RESUME_GAP_MS = 6 * 60 * 60 * 1000L
+        const val MAX_DURATION_MINUTES = 300
     }
 }

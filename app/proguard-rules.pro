@@ -8,7 +8,11 @@
 -keepclasseswithmembers class com.fitcoach.app.** { kotlinx.serialization.KSerializer serializer(...); }
 -keep class com.fitcoach.app.data.remote.dto.** { *; }
 -keep class com.fitcoach.app.ai.dto.** { *; }
--keep class com.fitcoach.app.data.club.model.** { *; }
+-keep class com.fitcoach.app.data.club.ClubContent { *; }
+-keep class com.fitcoach.app.data.club.Trainer { *; }
+-keep class com.fitcoach.app.data.club.ClubService { *; }
+-keep class com.fitcoach.app.data.club.ScheduleItem { *; }
+-keep class com.fitcoach.app.data.club.Promo { *; }
 
 # --- Retrofit / OkHttp -----------------------------------------------------------------
 -dontwarn okhttp3.**

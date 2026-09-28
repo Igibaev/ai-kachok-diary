@@ -114,13 +114,13 @@ fun ChatScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(FitCoachColors.Warning.copy(alpha = 0.10f))
+                    .background(FitCoachColors.Surface)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     stringResource(R.string.chat_demo_banner),
                     fontSize = 12.sp,
-                    color = FitCoachColors.Warning
+                    color = FitCoachColors.TextSecondary
                 )
             }
         }

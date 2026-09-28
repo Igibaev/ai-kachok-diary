@@ -91,7 +91,7 @@ class ProgressViewModel @Inject constructor(
         return ProgressUiState(
             profile = profile,
             completedTotal = workouts.size,
-            programCompleted = programDone,
+            programCompleted = programDone.coerceAtMost(program.totalWeeks * profile.daysPerWeek.coerceAtLeast(1)),
             programTotal = program.totalWeeks * profile.daysPerWeek.coerceAtLeast(1),
             programTitle = program.title,
             weekInProgram = week,

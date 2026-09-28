@@ -10,9 +10,12 @@ compatibility_flags = ["nodejs_compat"]
 MODEL = "claude-opus-5"
 DAILY_LIMIT_PER_DEVICE = "40"
 DAILY_LIMIT_GLOBAL = "5000"
+# Лимит с одного IP в сутки (X-Device-Id присылает клиент, IP подделать сложнее).
+DAILY_LIMIT_PER_IP = "200"
 
-# KV для счётчиков лимитов. Создать: wrangler kv namespace create RATE_LIMIT_KV
-# и вставить полученный id ниже. Без KV прокси работает, но без лимитов.
-# [[kv_namespaces]]
-# binding = "RATE_LIMIT_KV"
-# id = "<KV_NAMESPACE_ID>"
+# KV для счётчиков лимитов — ОБЯЗАТЕЛЬНЫЙ шаг. Создать: wrangler kv namespace create RATE_LIMIT_KV
+# и вставить полученный id ниже. Без KV прокси отвечает 503 rate_limit_not_configured
+# (fail-closed: токен приложения извлекаем из APK, лимиты — единственная защита бюджета).
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "<KV_NAMESPACE_ID>"

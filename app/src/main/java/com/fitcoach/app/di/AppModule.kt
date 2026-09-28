@@ -34,8 +34,14 @@ object AppModule {
                     super.onCreate(database)
                     db?.let { PrepopulateCallback(it).onCreate(database) }
                 }
+
+                override fun onDestructiveMigration(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                    super.onDestructiveMigration(database)
+                    db?.let { PrepopulateCallback(it).onDestructiveMigration(database) }
+                }
             })
-            // Приложение ещё не опубликовано: при смене схемы база пересоздаётся.
+            // TODO(release): до публикации в Play — exportSchema=true + явные Migration, fallback оставить только в debug:
+            // иначе первое же изменение Entity сотрёт дневник здоровья пользователей.
             .fallbackToDestructiveMigration()
             .build()
         return db

@@ -21,7 +21,6 @@ class DirectAnthropicClient @Inject constructor(
     private val brand: AiBrand
 ) : AiClient {
 
-    override val label: String = "Anthropic API (${brand.model})"
 
     override suspend fun chat(
         system: String,

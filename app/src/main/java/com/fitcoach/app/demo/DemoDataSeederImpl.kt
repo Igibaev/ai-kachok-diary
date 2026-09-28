@@ -85,7 +85,7 @@ class DemoDataSeederImpl @Inject constructor(
     private fun baseWeightFor(ex: ExerciseTemplate, profile: UserProfile): Pair<Float, Float> {
         val female = profile.sex == Sex.FEMALE
         val hint = ex.sets.firstOrNull()?.weight.orEmpty()
-        if (hint.contains("б/в") || hint.contains("собств")) return 0f to 0f
+        if (hint.contains("б/в") || hint.contains("свой вес") || hint.contains("собств")) return 0f to 0f
         val group = (ex.muscleGroup + " " + ex.name).lowercase()
         val base = when {
             "жим ногами" in group || "присед" in group -> if (female) 40f else 70f
@@ -103,7 +103,8 @@ class DemoDataSeederImpl @Inject constructor(
 
     private suspend fun seedWorkouts(profile: UserProfile, today: LocalDate, rnd: Random) {
         val program = ProgramCatalog.getOrDefault(profile.programKey)
-        val daysPerWeek = program.daysPerWeek
+        // Как и экраны (Dashboard/Progress/Chat): недели считаются по profile.daysPerWeek, а не программы.
+        val daysPerWeek = profile.daysPerWeek.coerceAtLeast(1)
         val fourDays = daysPerWeek >= 4
         // Смещения назад в днях; последняя тренировка — позавчера, чтобы главная показывала «следующую».
         val offsets = if (fourDays) listOf(20, 19, 17, 15, 13, 12, 10, 8, 6, 2)

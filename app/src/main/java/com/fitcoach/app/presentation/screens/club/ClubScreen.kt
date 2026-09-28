@@ -278,7 +278,17 @@ private fun ServicesCard(services: List<ClubService>) {
                     s.description?.takeIf { it.isNotBlank() }?.let { Text(it, fontSize = 11.sp, color = FitCoachColors.TextMuted) }
                 }
                 Text(servicePriceLabel(s), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
+                if (BrandConfig.hasWhatsapp) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(R.string.club_services_tap_hint),
+                        tint = FitCoachColors.Accent, modifier = Modifier.padding(start = 10.dp).size(18.dp)
+                    )
+                }
             }
+        }
+        if (BrandConfig.hasWhatsapp && services.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(stringResource(R.string.club_services_tap_hint), fontSize = 11.sp, color = FitCoachColors.TextMuted)
         }
     }
 }

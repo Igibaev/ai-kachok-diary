@@ -81,19 +81,22 @@ class ChatViewModel @Inject constructor(
         // Флаг ставим синхронно, до запуска корутины — иначе двойной тап успевает отправить дважды.
         _state.update { it.copy(isTyping = true) }
         viewModelScope.launch {
-            // История берётся ДО сохранения нового сообщения: текущий вопрос уходит отдельно.
-            val history = chatRepository.getRecentMessages(HISTORY_LIMIT).filter { !it.isError }
-            val userMsg = ChatMessage(
-                id = UUID.randomUUID().toString(),
-                role = "user",
-                content = text,
-                timestamp = System.currentTimeMillis()
-            )
-            chatRepository.saveMessage(userMsg)
-
-            val profile = userRepository.getProfile() ?: UserProfile()
-            val locale = profile.language.ifBlank { BrandConfig.defaultLanguage }
+            // Всё тело — внутри try/finally: ошибка Room до отправки не должна ни уронить процесс,
+            // ни оставить isTyping=true (ввод навсегда заблокирован).
+            var locale = BrandConfig.defaultLanguage
             try {
+                // История берётся ДО сохранения нового сообщения: текущий вопрос уходит отдельно.
+                val history = chatRepository.getRecentMessages(HISTORY_LIMIT).filter { !it.isError }
+                val userMsg = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    role = "user",
+                    content = text,
+                    timestamp = System.currentTimeMillis()
+                )
+                chatRepository.saveMessage(userMsg)
+
+                val profile = userRepository.getProfile() ?: UserProfile()
+                locale = profile.language.ifBlank { BrandConfig.defaultLanguage }
                 val system = buildSystemPrompt(buildContext(profile, locale))
                 val client = selector.current()
                 _state.update { it.copy(mode = selector.currentMode()) }
@@ -105,7 +108,7 @@ class ChatViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                saveAssistant(AiErrors.serverUnavailable(locale), isError = true)
+                runCatching { saveAssistant(AiErrors.serverUnavailable(locale), isError = true) }
             } finally {
                 _state.update { it.copy(isTyping = false) }
                 refreshQuickPrompts()

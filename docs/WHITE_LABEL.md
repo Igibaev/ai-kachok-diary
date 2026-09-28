@@ -30,7 +30,9 @@ cp brands/_template.properties.example brands/ironclub.properties
 | `clubDataUrl` | JSON с тренерами/расписанием/акциями (см. `docs/CLUB_CONTENT.md`). Пусто → берётся из `assets/club/club.json` | |
 | `newsUrl` | Зарезервировано | |
 | `accentColor`, `accentOnColor`, `backgroundColor`, `surfaceColor`, `cardColor` | Цвета `#RRGGBB`. Тема тёмная; акцент должен быть светлым — сборка проверяет контраст (≥ 3.0) | `#FF5A1F` |
-| `aiProxyUrl`, `aiProxyToken` | Адрес и токен Cloudflare Worker из папки `proxy/` | |
+| `aiProxyUrl` | Адрес Cloudflare Worker из папки `proxy/` (только `https://`) | |
+| `aiProxyToken` | Токен Worker — НЕ в git: переменная `AI_PROXY_TOKEN_<NAME>` или `brands/<name>.secrets.properties` | |
+| `privacyPolicyUrl` | Публичная ссылка на политику конфиденциальности (ссылка в онбординге и настройках; обязательна для Play) | |
 | `aiModel` | Модель Claude (по умолчанию `claude-opus-5`) | |
 
 ## Шаг 2. Логотип и иконка (необязательно, но именно это даёт «вау»)

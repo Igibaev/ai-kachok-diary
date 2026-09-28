@@ -21,7 +21,7 @@ interface NutritionDao {
     @Query("SELECT DISTINCT name FROM nutrition_entries ORDER BY name")
     suspend fun getAllFoodNames(): List<String>
 
-    @Query("SELECT * FROM nutrition_entries WHERE name LIKE '%' || :query || '%' LIMIT 50")
+    @Query("SELECT * FROM nutrition_entries WHERE mealType = 'TEMPLATE' AND name LIKE '%' || :query || '%' LIMIT 50")
     suspend fun searchEntries(query: String): List<NutritionEntryEntity>
 
     @Query("SELECT * FROM nutrition_entries WHERE mealType = 'TEMPLATE' ORDER BY name")

@@ -23,18 +23,6 @@ object WorkoutTitles {
             ?: workout.phaseName.substringAfter("— ", workout.phaseName).ifBlank { workout.planKey }
     }
 
-    fun subtitleFor(workout: Workout): String {
-        if (ActivityType.fromPlanKey(workout.planKey) != null) return "Вне программы"
-        val program = ProgramCatalog.get(workout.programKey)
-        val phase = program?.phaseForWeek(workout.weekNumber)
-        return buildString {
-            if (program != null) append(program.title)
-            if (phase != null) { if (isNotEmpty()) append(" · "); append("Фаза ${phase.index}") }
-            if (isNotEmpty()) append(" · ")
-            append("Неделя ${workout.weekNumber}")
-        }
-    }
-
     /** Суммарный объём: Σ actualWeight × actualReps по выполненным подходам, кг. */
     fun volumeKg(sets: List<ExerciseSet>): Int =
         sets.filter { it.isDone }.sumOf { s ->

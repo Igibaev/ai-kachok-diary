@@ -50,6 +50,11 @@ object DomainTranslations {
             return "$num кезең — ${KK_MAP[name] ?: name}"
         }
         PHASE_NUM.matchEntire(text)?.let { m -> return "${m.groupValues[1]}-кезең" }
+        // Подсказка замены из ProgramCatalog.applyRestrictions: «Замена из-за ограничения: <упражнение>».
+        if (text.startsWith(RESTRICTION_PREFIX)) {
+            val name = text.removePrefix(RESTRICTION_PREFIX)
+            return "Шектеу себебінен ауыстыру: ${KK_MAP[name] ?: name}"
+        }
         if (text.contains(" · ")) {
             return text.split(" · ").joinToString(" · ") { part ->
                 KK_MAP[part] ?: KK_MAP[part.replaceFirstChar { c -> c.uppercase() }]?.replaceFirstChar { c -> c.lowercase() } ?: part
@@ -61,6 +66,7 @@ object DomainTranslations {
         return text
     }
 
+    const val RESTRICTION_PREFIX = "Замена из-за ограничения: "
     private val PHASE_ROMAN = Regex("^Фаза (I{1,3}|IV|V) — (.+)$")
     private val PHASE_NUM = Regex("^Фаза (\\d+)$")
 }

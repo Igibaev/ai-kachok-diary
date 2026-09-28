@@ -3,6 +3,8 @@ build/
 *.iml
 .idea/
 local.properties
+# токены прокси клиентов (см. proxy/README.md)
+brands/*.secrets.properties
 *.jks
 *.keystore
 *.apk

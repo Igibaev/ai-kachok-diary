@@ -38,8 +38,30 @@ val brandStringKeys = listOf(
     "clubName", "clubCity", "clubAddress", "clubHours", "clubPhone", "clubWhatsapp",
     "clubInstagram", "clubMapUrl", "clubWebsite", "clubDataUrl", "newsUrl",
     "accentColor", "accentOnColor", "backgroundColor", "surfaceColor", "cardColor",
-    "aiProxyUrl", "aiProxyToken", "aiModel"
+    "aiProxyUrl", "aiProxyToken", "aiModel", "privacyPolicyUrl"
 )
+
+/**
+ * Секрет прокси не хранится в отслеживаемом brands/<name>.properties: приоритет у переменной окружения
+ * AI_PROXY_TOKEN_<NAME> и gitignored-файла brands/<name>.secrets.properties.
+ */
+fun brandSecret(file: File, key: String, fallback: String): String {
+    val name = file.nameWithoutExtension
+    System.getenv("${key.toConstName()}_${name.uppercase()}")?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
+    val secrets = file.resolveSibling("$name.secrets.properties")
+    if (secrets.isFile) loadBrand(secrets).str(key).takeIf { it.isNotEmpty() }?.let { return it }
+    return fallback
+}
+
+/** Внешние адреса бренда: только https (политика конфиденциальности обещает шифрование в транзите);
+ *  http разрешён лишь для локальной отладки на loopback (10.0.2.2 / localhost). */
+fun requireHttps(file: File, p: Properties, key: String) {
+    val value = p.str(key)
+    val localDebug = Regex("^http://(10\\.0\\.2\\.2|localhost|127\\.0\\.0\\.1)(:\\d+)?(/.*)?$").matches(value)
+    require(value.isBlank() || value.startsWith("https://") || localDebug) {
+        "Бренд ${file.name}: $key должен начинаться с https:// (получено: $value); http допустим только для 10.0.2.2/localhost."
+    }
+}
 
 
 /** Контраст акцента к фону (WCAG relative luminance). Слишком тёмный акцент на тёмном фоне — ошибка сборки. */
@@ -59,6 +81,11 @@ brandFiles.forEach { file ->
     require(ratio >= 3.0) {
         "Бренд ${file.name}: контраст accentColor/backgroundColor = ${"%.2f".format(ratio)} (< 3.0). Выберите более светлый акцент или более тёмный фон."
     }
+    // Тема тёмная: текст (#F5F5F5/#AAAAAA) задан константами, светлый фон дал бы невидимый UI.
+    require(luminance(p.str("backgroundColor", "#0D0D0D")) < 0.2) {
+        "Бренд ${file.name}: backgroundColor слишком светлый — тема приложения тёмная (см. docs/WHITE_LABEL.md)."
+    }
+    listOf("aiProxyUrl", "clubDataUrl", "newsUrl", "privacyPolicyUrl").forEach { requireHttps(file, p, it) }
 }
 
 val appVersionCode: Int = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
@@ -98,7 +125,8 @@ android {
 
                 buildConfigField("String", "BRAND_ID", quoted(flavorName))
                 brandStringKeys.forEach { key ->
-                    buildConfigField("String", key.toConstName(), quoted(p.str(key)))
+                    val value = if (key == "aiProxyToken") brandSecret(file, key, p.str(key)) else p.str(key)
+                    buildConfigField("String", key.toConstName(), quoted(value))
                 }
             }
         }

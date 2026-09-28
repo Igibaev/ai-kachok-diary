@@ -84,7 +84,7 @@ class ShareServiceImpl @Inject constructor(
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        appContext.grantUriPermission(INSTAGRAM, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // Явный grantUriPermission не нужен (URI в data + FLAG_GRANT_READ_URI_PERMISSION) и жил бы до перезагрузки.
         return runCatching { context.startActivity(intent) }.isSuccess
     }
 

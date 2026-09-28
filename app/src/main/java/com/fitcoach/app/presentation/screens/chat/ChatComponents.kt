@@ -165,7 +165,7 @@ fun TypingIndicator() {
 @Composable
 fun AiModeChip(mode: AiMode, modifier: Modifier = Modifier) {
     val color = when (mode) {
-        AiMode.DEMO -> FitCoachColors.Warning
+        AiMode.DEMO -> FitCoachColors.TextSecondary
         AiMode.CLUB -> FitCoachColors.Success
         AiMode.DEVELOPER -> FitCoachColors.Water
     }

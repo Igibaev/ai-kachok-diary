@@ -106,6 +106,15 @@ fun ResultStep(state: OnboardingUiState, onConsent: (Boolean) -> Unit) {
                 fontSize = 12.sp, color = FitCoachColors.TextPrimary
             )
         }
+        if (BrandConfig.hasPrivacyPolicy) {
+            Text(
+                stringResource(R.string.privacy_policy_link),
+                fontSize = 13.sp, color = FitCoachColors.Accent, fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clickable { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(BrandConfig.privacyPolicyUrl))) } }
+            )
+        }
     }
 }
 

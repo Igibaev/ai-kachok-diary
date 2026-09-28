@@ -33,7 +33,9 @@ internal fun OnboardingField(
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
     suffix: String? = null,
-    modifier: Modifier = Modifier.fillMaxWidth()
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    /** Текст ошибки (диапазон) — показывается, когда значение введено, но не проходит валидацию. */
+    errorText: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -41,6 +43,8 @@ internal fun OnboardingField(
         modifier = modifier,
         label = { Text(label, color = FitCoachColors.TextMuted) },
         suffix = suffix?.let { { Text(it, color = FitCoachColors.TextMuted) } },
+        isError = errorText != null,
+        supportingText = errorText?.let { { Text(it, color = FitCoachColors.Error, fontSize = 12.sp) } },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
@@ -50,6 +54,13 @@ internal fun OnboardingField(
             cursorColor = FitCoachColors.Accent
         )
     )
+}
+
+/** Текст ошибки для числового поля: только когда что-то введено и значение вне [min, max]. */
+private fun rangeError(raw: String, min: Float, max: Float, message: String): String? {
+    if (raw.isBlank()) return null
+    val v = raw.replace(',', '.').toFloatOrNull() ?: return message
+    return if (v in min..max) null else message
 }
 
 @Composable
@@ -79,7 +90,11 @@ fun SexAgeStep(draft: OnboardingDraft, update: DraftUpdate) {
             SelectableChip(stringResource(R.string.onboarding_sex_male), draft.sex == Sex.MALE, { update { it.copy(sex = Sex.MALE) } }, Modifier.weight(1f), leading = "👨")
             SelectableChip(stringResource(R.string.onboarding_sex_female), draft.sex == Sex.FEMALE, { update { it.copy(sex = Sex.FEMALE) } }, Modifier.weight(1f), leading = "👩")
         }
-        OnboardingField(stringResource(R.string.onboarding_age_label), draft.age, { v -> update { it.copy(age = v.filter { c -> c.isDigit() }.take(2)) } }, KeyboardType.Number, stringResource(R.string.unit_years))
+        OnboardingField(
+            stringResource(R.string.onboarding_age_label), draft.age, { v -> update { it.copy(age = v.filter { c -> c.isDigit() }.take(2)) } },
+            KeyboardType.Number, stringResource(R.string.unit_years),
+            errorText = rangeError(draft.age, 14f, 90f, stringResource(R.string.onboarding_age_range))
+        )
     }
 }
 
@@ -88,9 +103,21 @@ fun BodyStep(draft: OnboardingDraft, update: DraftUpdate) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val kg = stringResource(R.string.unit_kg)
         Hint(stringResource(R.string.onboarding_body_hint))
-        OnboardingField(stringResource(R.string.onboarding_height_label), draft.heightCm, { v -> update { it.copy(heightCm = v.filter { c -> c.isDigit() }.take(3)) } }, KeyboardType.Number, stringResource(R.string.unit_cm))
-        OnboardingField(stringResource(R.string.onboarding_weight_label), draft.weightKg, { v -> update { it.copy(weightKg = v.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5)) } }, KeyboardType.Decimal, kg)
-        OnboardingField(stringResource(R.string.onboarding_target_weight_label), draft.targetWeightKg, { v -> update { it.copy(targetWeightKg = v.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5)) } }, KeyboardType.Decimal, kg)
+        OnboardingField(
+            stringResource(R.string.onboarding_height_label), draft.heightCm, { v -> update { it.copy(heightCm = v.filter { c -> c.isDigit() }.take(3)) } },
+            KeyboardType.Number, stringResource(R.string.unit_cm),
+            errorText = rangeError(draft.heightCm, 120f, 230f, stringResource(R.string.onboarding_height_range))
+        )
+        OnboardingField(
+            stringResource(R.string.onboarding_weight_label), draft.weightKg, { v -> update { it.copy(weightKg = v.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5)) } },
+            KeyboardType.Decimal, kg,
+            errorText = rangeError(draft.weightKg, 35f, 250f, stringResource(R.string.onboarding_weight_range))
+        )
+        OnboardingField(
+            stringResource(R.string.onboarding_target_weight_label), draft.targetWeightKg, { v -> update { it.copy(targetWeightKg = v.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(5)) } },
+            KeyboardType.Decimal, kg,
+            errorText = rangeError(draft.targetWeightKg, 35f, 250f, stringResource(R.string.onboarding_weight_range))
+        )
     }
 }
 

@@ -167,6 +167,19 @@ class ProgramCatalogTest {
     }
 
     @Test
+    fun `shoulder restriction never swaps an overhead press for another press`() {
+        ProgramCatalog.programs.flatMap { it.phases }.flatMap { it.templates }.forEach { t ->
+            val safe = ProgramCatalog.applyRestrictions(t, setOf(Restriction.SHOULDERS))
+            t.exercises.filter { Restriction.SHOULDERS in it.avoidFor && it.muscleGroup == "Плечи" }.forEach { ex ->
+                val swapped = safe.exercises.first { ProgramCatalog.baseIdOf(it.id) == ex.id }
+                assertFalse("${t.key}/${ex.id}: ${swapped.name} — жим над головой при ограничении «Плечи»", swapped.name.contains("жим", ignoreCase = true))
+                assertTrue(swapped.name in ex.alternatives)
+                assertEquals(ProgramCatalog.alternativeId(ex.id, ex.alternatives.indexOf(swapped.name) + 1), swapped.id)
+            }
+        }
+    }
+
+    @Test
     fun `alternative ids round-trip`() {
         assertEquals("a", ProgramCatalog.alternativeId("a", 0))
         assertEquals("a~2", ProgramCatalog.alternativeId("a~1", 2))

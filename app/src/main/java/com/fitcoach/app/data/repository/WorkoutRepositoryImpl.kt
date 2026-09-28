@@ -81,6 +81,9 @@ class WorkoutRepositoryImpl @Inject constructor(
 
     override suspend fun getLastResultForExercise(exerciseId: String): ExerciseSet? =
         exerciseSetDao.getLastDoneSetsForExercise(exerciseId, 1).firstOrNull()?.toDomain()
+
+    override suspend fun getLastResultForExerciseName(exerciseName: String, excludeWorkoutId: String): ExerciseSet? =
+        exerciseSetDao.getLastDoneSetsForExerciseName(exerciseName, excludeWorkoutId, 1).firstOrNull()?.toDomain()
 }
 
 fun WorkoutEntity.toDomain() = Workout(

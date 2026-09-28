@@ -73,20 +73,33 @@ object ProgramCatalog {
     fun nextWorkout(program: Program, completedWorkouts: List<Workout>, daysPerWeek: Int = program.daysPerWeek): NextWorkout =
         nextWorkout(program, completedInProgram(program, completedWorkouts), daysPerWeek)
 
-    /** Замена упражнений, противопоказанных при ограничениях пользователя, на первую альтернативу. */
+    /** Замена упражнений, противопоказанных при ограничениях пользователя, на безопасную альтернативу. */
     fun applyRestrictions(template: WorkoutTemplate, restrictions: Set<Restriction>): WorkoutTemplate {
         if (restrictions.isEmpty()) return template
         return template.copy(exercises = template.exercises.map { ex ->
             val hit = ex.avoidFor.any { it in restrictions }
-            val alt = ex.alternatives.firstOrNull()
-            if (hit && alt != null) ex.copy(
-                id = alternativeId(ex.id, 1),
+            val alt = if (hit) safeAlternative(ex, restrictions) else null
+            if (alt != null) ex.copy(
+                id = alternativeId(ex.id, ex.alternatives.indexOf(alt) + 1),
                 name = alt,
                 youtubeSearchQuery = "$alt техника",
                 tip = "Замена из-за ограничения: ${ex.name}"
             ) else ex
         })
     }
+
+    /**
+     * Первая альтернатива, не противоречащая ограничению: при «Плечи» AI-тренер запрещает жимы над головой,
+     * поэтому «Жим гантелей сидя» → не «Жим в тренажёре на плечи», а подъём/разведение.
+     */
+    private fun safeAlternative(ex: ExerciseTemplate, restrictions: Set<Restriction>): String? {
+        if (Restriction.SHOULDERS in restrictions && Restriction.SHOULDERS in ex.avoidFor) {
+            ex.alternatives.firstOrNull { !isPress(it) }?.let { return it }
+        }
+        return ex.alternatives.firstOrNull()
+    }
+
+    private fun isPress(name: String): Boolean = name.contains("жим", ignoreCase = true)
 
     /** Идентификатор замены: `<baseId>~<n>`; `n = 0` — исходное упражнение. */
     fun alternativeId(baseId: String, index: Int): String =

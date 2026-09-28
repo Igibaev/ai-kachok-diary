@@ -32,7 +32,6 @@ class ProxyAiClient @Inject constructor(
     private val userRepository: UserRepository
 ) : AiClient {
 
-    override val label: String = "Прокси клуба"
 
     override suspend fun chat(
         system: String,

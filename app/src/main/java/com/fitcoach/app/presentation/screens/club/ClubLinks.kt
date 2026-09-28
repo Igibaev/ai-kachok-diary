@@ -8,8 +8,13 @@ import com.fitcoach.app.brand.BrandConfig
 
 /** Открытие внешних ссылок клуба (WhatsApp, Instagram, карта, звонок) без падений, если приложения нет. */
 object ClubLinks {
+    /** Разрешённые схемы: ctaUrl приходит из удалённого club.json, intent:/file:/content: туда не пускаем. */
+    private val ALLOWED_SCHEMES = setOf("http", "https", "tel", "whatsapp", "mailto")
+
     fun open(context: Context, url: String) {
         if (url.isBlank()) return
+        val scheme = runCatching { Uri.parse(url).scheme?.lowercase() }.getOrNull() ?: return
+        if (scheme !in ALLOWED_SCHEMES) return
         runCatching {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }

@@ -49,7 +49,10 @@ object GoalCalculator {
         val tdee = bmr(profile) * activityFactor(profile.daysPerWeek) * goalAdjustment(profile.goal)
         val calories = tdee.roundToInt().coerceAtLeast(minKcal)
 
-        val protein = (proteinPerKg(profile.goal) * profile.weightKg).roundToInt().coerceAtLeast(50)
+        // Белок — от целевого веса, если он ниже фактического: при 120 кг 2 г/кг дали бы 240 г (почти половина рациона).
+        val proteinBaseKg = profile.targetWeightKg?.takeIf { it > 0f && it < profile.weightKg } ?: profile.weightKg
+        val protein = (proteinPerKg(profile.goal) * proteinBaseKg).roundToInt()
+            .coerceIn(50, (calories * 0.35 / 4.0).roundToInt().coerceAtLeast(50))
         val fat = (calories * fatShare(profile.goal) / 9.0).roundToInt().coerceAtLeast(30)
         val carbs = ((calories - protein * 4 - fat * 9) / 4.0).roundToInt().coerceAtLeast(50)
 

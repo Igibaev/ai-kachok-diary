@@ -21,17 +21,22 @@
    ```bash
    npm install
    npx wrangler login
-   npx wrangler kv namespace create RATE_LIMIT_KV      # скопируйте id в wrangler.toml (раскомментируйте блок)
+   npx wrangler kv namespace create RATE_LIMIT_KV      # ОБЯЗАТЕЛЬНО: вставьте id в wrangler.toml (без KV прокси отвечает 503)
    npx wrangler secret put ANTHROPIC_API_KEY            # ключ из console.anthropic.com
    npx wrangler secret put APP_TOKEN                    # длинная случайная строка, например: openssl rand -hex 24
    npx wrangler deploy
    ```
-3. Скопируйте URL вида `https://fitcoach-ai-proxy.<account>.workers.dev` и токен в
-   `brands/<клиент>.properties`:
+3. Скопируйте URL вида `https://fitcoach-ai-proxy.<account>.workers.dev` в
+   `brands/<клиент>.properties`, а токен — в переменную окружения сборки (НЕ в git):
    ```properties
    aiProxyUrl=https://fitcoach-ai-proxy.<account>.workers.dev
-   aiProxyToken=<APP_TOKEN>
+   # aiProxyToken оставьте пустым — см. ниже
    ```
+   ```bash
+   export AI_PROXY_TOKEN_<КЛИЕНТ_В_ВЕРХНЕМ_РЕГИСТРЕ>=<APP_TOKEN>   # например AI_PROXY_TOKEN_DEMO
+   ```
+   Альтернатива — gitignored-файл `brands/<клиент>.secrets.properties` с строкой `aiProxyToken=<APP_TOKEN>`.
+   Значение из окружения/secrets-файла имеет приоритет над `brands/<клиент>.properties`.
 4. Пересоберите приложение. Всё.
 
 Проверка: `curl https://<url>/health` → `{"ok":true,"model":"claude-opus-5"}`.
@@ -59,12 +64,18 @@
 ```
 
 Ответ `200`: `{ "text": "…", "model": "claude-opus-5", "usage": { "input_tokens": 1500, "output_tokens": 240 } }`.
-Ошибки: `401` неверный токен, `429` лимит (в `text` — готовая фраза для показа пользователю), `502/504` проблема выше по цепочке.
+Ошибки: `401` неверный токен, `400` некорректный `X-Device-Id` (разрешено `[A-Za-z0-9_-]{1,64}`), `413/415` тело больше 64 КБ или не JSON,
+`429` лимит (в `text` — готовая фраза для показа пользователю), `503 rate_limit_not_configured` — не привязан KV, `502/504` проблема выше по цепочке.
 
 ## Безопасность
 
 - Ключ Anthropic никогда не покидает Cloudflare.
-- Токен приложения можно перевыпустить (`wrangler secret put APP_TOKEN` + пересборка).
+- Токен приложения — это клиентский секрет ограниченной силы: он извлекается из APK, поэтому бюджет
+  защищают лимиты (на устройство, на IP, общий), а не токен. Лимиты обязательны (fail-closed без KV).
+- Ротация токена: `wrangler secret put APP_TOKEN`, новый токен в `AI_PROXY_TOKEN_<КЛИЕНТ>`, пересборка и
+  выкладка обновления; старые сборки получат `401` и перейдут в демо-режим.
+- Мониторинг расходов: Cloudflare Dashboard → Workers → Metrics (число запросов) и console.anthropic.com → Usage;
+  при аномалии уменьшите `DAILY_LIMIT_GLOBAL` и ротируйте токен.
 - История чата хранится только на телефоне; прокси ничего не логирует.
 - При отказе классификаторов безопасности Anthropic запрос автоматически переигрывается на
   рекомендованной модели (`fallbacks: "default"`), пользователь получает ответ, а не ошибку.
@@ -76,4 +87,6 @@ cp .dev.vars.example .dev.vars   # заполните ключи
 npm run dev                       # http://localhost:8787
 ```
 
-В приложении для локальной отладки укажите `aiProxyUrl=http://10.0.2.2:8787` (эмулятор).
+В приложении для локальной отладки укажите `aiProxyUrl=http://10.0.2.2:8787` (эмулятор) — cleartext
+разрешён только в debug-сборках для `10.0.2.2`/`localhost` (`res/xml/network_security_config*.xml`); release-сборка
+требует `https://` для `aiProxyUrl`, `clubDataUrl` и `newsUrl`.

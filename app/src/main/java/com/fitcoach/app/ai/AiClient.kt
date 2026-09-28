@@ -22,16 +22,10 @@ interface AiClient {
         locale: String
     ): Result<String>
 
-    /** Короткая подпись реализации для UI/логов. */
-    val label: String
 }
 
-/** Режим работы AI для отображения в интерфейсе. */
-enum class AiMode(val title: String, val chipLabel: String) {
-    DEMO("Демо", "Демо-режим"),
-    CLUB("Клуб", "AI клуба"),
-    DEVELOPER("Разработчик", "Разработчик")
-}
+/** Режим работы AI; подписи — только в ресурсах (R.string.ai_mode_*), чтобы не было второго источника правды. */
+enum class AiMode { DEMO, CLUB, DEVELOPER }
 
 /**
  * Короткие тексты ошибок на языке пользователя. Никаких технических деталей —

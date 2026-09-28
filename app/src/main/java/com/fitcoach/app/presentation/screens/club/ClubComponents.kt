@@ -123,10 +123,12 @@ fun SmallChip(text: String, color: Color = FitCoachColors.TextSecondary, backgro
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(background)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 5.dp)
+            // Кликабельный чип («Записаться», @instagram) — тач-цель не меньше 36dp, иначе в него сложно попасть.
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick).defaultMinSize(minHeight = 36.dp) else Modifier)
+            .padding(horizontal = if (onClick != null) 14.dp else 10.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(text, fontSize = 11.sp, color = color, fontWeight = FontWeight.Medium)
+        Text(text, fontSize = if (onClick != null) 13.sp else 11.sp, color = color, fontWeight = FontWeight.Medium)
     }
 }
 

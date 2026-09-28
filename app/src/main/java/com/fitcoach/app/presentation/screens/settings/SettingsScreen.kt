@@ -42,6 +42,7 @@ fun SettingsScreen(
     val form = state.form
     val snackbar = remember { SnackbarHostState() }
     var confirmClear by remember { mutableStateOf(false) }
+    var confirmSeed by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(state.message) {
@@ -144,7 +145,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = viewModel::seedDemo, enabled = !state.busy, modifier = Modifier.weight(1f),
+                        onClick = { confirmSeed = true }, enabled = !state.busy, modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.AccentSoft, contentColor = FitCoachColors.Accent),
                         shape = RoundedCornerShape(12.dp)
                     ) { Text(stringResource(R.string.settings_demo_load)) }
@@ -169,6 +170,13 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(12.dp)
             ) { Text(stringResource(R.string.settings_restart_onboarding)) }
 
+            if (BrandConfig.hasPrivacyPolicy) {
+                TextButton(
+                    onClick = { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(BrandConfig.privacyPolicyUrl))) } },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(R.string.privacy_policy_link), color = FitCoachColors.Accent) }
+            }
+
             Text(
                 stringResource(R.string.settings_version, BrandConfig.appName, BuildConfig.VERSION_NAME, BrandConfig.brandId),
                 fontSize = 11.sp, color = FitCoachColors.TextMuted,
@@ -176,6 +184,22 @@ fun SettingsScreen(
             )
             Spacer(Modifier.height(64.dp))
         }
+    }
+
+    if (confirmSeed) {
+        AlertDialog(
+            onDismissRequest = { confirmSeed = false },
+            containerColor = FitCoachColors.Card,
+            title = { Text(stringResource(R.string.settings_demo_title), color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.settings_demo_text), color = FitCoachColors.TextSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = { confirmSeed = false; viewModel.seedDemo() },
+                    colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn)
+                ) { Text(stringResource(R.string.settings_demo_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmSeed = false }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
+        )
     }
 
     if (confirmClear) {

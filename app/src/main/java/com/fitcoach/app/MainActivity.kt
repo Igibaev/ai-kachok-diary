@@ -29,7 +29,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.fitcoach.app.domain.repository.UserRepository
@@ -62,11 +61,20 @@ class MainActivity : AppCompatActivity() {
             val vm: MainViewModel = hiltViewModel()
             val start by vm.startDestination.collectAsState()
             startDestination = start
+            // Разрешение на уведомления просим не поверх splash/онбординга, а когда пользователь
+            // уже на главной: вернувшийся — сразу, новый — после завершения онбординга.
+            LaunchedEffect(start) {
+                if (start == Screen.Dashboard.route) requestNotificationPermissionIfNeeded()
+            }
             FitCoachTheme {
-                start?.let { MainAppContent(startDestination = it) }
+                start?.let {
+                    MainAppContent(
+                        startDestination = it,
+                        onOnboardingFinished = { requestNotificationPermissionIfNeeded() }
+                    )
+                }
             }
         }
-        requestNotificationPermissionIfNeeded()
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -107,7 +115,7 @@ private val bottomNavItems = listOf(
 )
 
 @Composable
-private fun MainAppContent(startDestination: String) {
+private fun MainAppContent(startDestination: String, onOnboardingFinished: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -133,7 +141,9 @@ private fun MainAppContent(startDestination: String) {
                             selected = selected,
                             onClick = {
                                 navController.navigate(item.screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    // Не findStartDestination(): в первой сессии это Onboarding, которого нет в стеке,
+                                    // и popUpTo молча игнорировался бы (вкладки копились, saveState не работал).
+                                    popUpTo(Screen.Dashboard.route) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -154,6 +164,7 @@ private fun MainAppContent(startDestination: String) {
         AppNavHost(
             navController = navController,
             startDestination = startDestination,
+            onOnboardingFinished = onOnboardingFinished,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
