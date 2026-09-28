@@ -24,5 +24,20 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun clearAll() = dao.clearAll()
 }
 
-private fun ChatMessageEntity.toDomain() = ChatMessage(id, role, content, timestamp, contextDate)
-private fun ChatMessage.toEntity() = ChatMessageEntity(id, role, content, timestamp, contextDate)
+private fun ChatMessageEntity.toDomain() = ChatMessage(
+    id = id,
+    role = role,
+    content = content,
+    timestamp = timestamp,
+    contextDate = contextDate,
+    isError = isError
+)
+
+private fun ChatMessage.toEntity() = ChatMessageEntity(
+    id = id,
+    role = role,
+    content = content,
+    timestamp = timestamp,
+    contextDate = contextDate,
+    isError = isError
+)
