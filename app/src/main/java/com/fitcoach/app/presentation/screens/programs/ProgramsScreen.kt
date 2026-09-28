@@ -11,16 +11,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.model.UserProfile
 import com.fitcoach.app.domain.program.Program
 import com.fitcoach.app.domain.program.ProgramCatalog
 import com.fitcoach.app.domain.repository.UserRepository
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.InfoChip
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -55,9 +58,9 @@ fun ProgramsScreen(onBack: () -> Unit, viewModel: ProgramsViewModel = hiltViewMo
         containerColor = FitCoachColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text("Программы", color = FitCoachColors.TextPrimary) },
+                title = { Text(stringResource(R.string.programs_title), color = FitCoachColors.TextPrimary) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = FitCoachColors.TextPrimary) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = FitCoachColors.TextPrimary) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FitCoachColors.Surface)
             )
@@ -70,7 +73,7 @@ fun ProgramsScreen(onBack: () -> Unit, viewModel: ProgramsViewModel = hiltViewMo
         ) {
             item {
                 Text(
-                    "12 недель, 3 фазы. График гибкий — тренировки идут по порядку, а не по дням недели.",
+                    stringResource(R.string.programs_intro),
                     fontSize = 13.sp, color = FitCoachColors.TextSecondary
                 )
             }
@@ -90,11 +93,10 @@ fun ProgramsScreen(onBack: () -> Unit, viewModel: ProgramsViewModel = hiltViewMo
         AlertDialog(
             onDismissRequest = { confirm = null },
             containerColor = FitCoachColors.Card,
-            title = { Text("Перейти на «${program.title}»?", color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.programs_switch_title, program.title.tr()), color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "Отсчёт недель начнётся заново, выполненные тренировки останутся в истории. " +
-                        "Дней в неделю: ${program.daysPerWeek}.",
+                    stringResource(R.string.programs_switch_text, program.daysPerWeek),
                     color = FitCoachColors.TextSecondary
                 )
             },
@@ -102,9 +104,9 @@ fun ProgramsScreen(onBack: () -> Unit, viewModel: ProgramsViewModel = hiltViewMo
                 Button(
                     onClick = { viewModel.select(program); confirm = null },
                     colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn)
-                ) { Text("Выбрать", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.programs_select), fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Отмена", color = FitCoachColors.TextMuted) } }
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
         )
     }
 }
@@ -115,20 +117,20 @@ private fun ProgramCard(program: Program, isCurrent: Boolean, isRecommended: Boo
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(program.emoji, fontSize = 32.sp)
             Column(Modifier.weight(1f)) {
-                Text(program.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = if (isCurrent) FitCoachColors.Accent else FitCoachColors.TextPrimary)
-                Text(program.subtitle, fontSize = 12.sp, color = FitCoachColors.TextSecondary)
+                Text(program.title.tr(), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = if (isCurrent) FitCoachColors.Accent else FitCoachColors.TextPrimary)
+                Text(program.subtitle.tr(), fontSize = 12.sp, color = FitCoachColors.TextSecondary)
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text(program.description, fontSize = 13.sp, color = FitCoachColors.TextSecondary)
+        Text(program.description.tr(), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            InfoChip("📅", "${program.daysPerWeek} дня/нед")
-            InfoChip("🎯", program.level.title)
-            if (isRecommended) InfoChip("⭐", "Для тебя", color = FitCoachColors.Accent)
+            InfoChip("📅", stringResource(R.string.programs_days_per_week, program.daysPerWeek))
+            InfoChip("🎯", program.level.title.tr())
+            if (isRecommended) InfoChip("⭐", stringResource(R.string.programs_for_you), color = FitCoachColors.Accent)
         }
         Spacer(Modifier.height(8.dp))
-        Text("Фазы: " + program.phases.joinToString(" → ") { it.name }, fontSize = 12.sp, color = FitCoachColors.TextMuted)
+        Text(stringResource(R.string.programs_phases, program.phases.joinToString(" → ") { it.name.tr() }), fontSize = 12.sp, color = FitCoachColors.TextMuted)
         Spacer(Modifier.height(12.dp))
         if (isCurrent) {
             OutlinedButton(
@@ -136,13 +138,13 @@ private fun ProgramCard(program: Program, isCurrent: Boolean, isRecommended: Boo
                 border = BorderStroke(1.dp, FitCoachColors.Accent),
                 colors = ButtonDefaults.outlinedButtonColors(disabledContentColor = FitCoachColors.Accent),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("Текущая программа") }
+            ) { Text(stringResource(R.string.programs_current)) }
         } else {
             Button(
                 onClick = onSelect, modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("Выбрать", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(R.string.programs_select), fontWeight = FontWeight.Bold) }
         }
     }
 }

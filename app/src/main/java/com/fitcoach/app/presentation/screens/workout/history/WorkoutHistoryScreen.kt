@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,11 +20,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.model.Workout
 import com.fitcoach.app.domain.program.ActivityType
 import com.fitcoach.app.domain.program.WorkoutTitles
 import com.fitcoach.app.domain.repository.WorkoutRepository
+import com.fitcoach.app.l10n.DomainTranslations
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
+import com.fitcoach.app.presentation.components.workoutSubtitle
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,13 +37,12 @@ import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import javax.inject.Inject
 
 data class HistoryItem(
     val workout: Workout,
+    /** Каноническое (русское) название — переводится в UI через `.tr()`. */
     val title: String,
-    val subtitle: String,
     val volumeKg: Int,
     val doneSets: Int,
     val totalSets: Int
@@ -53,7 +57,6 @@ class WorkoutHistoryViewModel @Inject constructor(workoutRepo: WorkoutRepository
                 HistoryItem(
                     workout = w,
                     title = WorkoutTitles.titleFor(w),
-                    subtitle = WorkoutTitles.subtitleFor(w),
                     volumeKg = WorkoutTitles.volumeKg(sets),
                     doneSets = sets.count { it.isDone },
                     totalSets = sets.size
@@ -71,18 +74,18 @@ fun WorkoutHistoryScreen(
     viewModel: WorkoutHistoryViewModel = hiltViewModel()
 ) {
     val items by viewModel.items.collectAsState()
-    val formatter = remember { DateTimeFormatter.ofPattern("d MMMM, EE", Locale.forLanguageTag("ru")) }
+    val formatter = remember { DateTimeFormatter.ofPattern("d MMMM, EE", DomainTranslations.currentLocale()) }
 
     Scaffold(
         containerColor = FitCoachColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text("Тренировки", color = FitCoachColors.TextPrimary) },
+                title = { Text(stringResource(R.string.history_title), color = FitCoachColors.TextPrimary) },
                 actions = {
                     TextButton(onClick = onOpenPrograms) {
                         Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null, tint = FitCoachColors.Accent, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Программы", color = FitCoachColors.Accent)
+                        Text(stringResource(R.string.history_programs), color = FitCoachColors.Accent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FitCoachColors.Surface)
@@ -97,14 +100,14 @@ fun WorkoutHistoryScreen(
             ) {
                 Text("🏋️", fontSize = 56.sp)
                 Spacer(Modifier.height(12.dp))
-                Text("Пока нет тренировок", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.TextPrimary)
+                Text(stringResource(R.string.history_empty_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.TextPrimary)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Нажми «Начать» на главной — первая тренировка займёт около 45 минут.",
+                    stringResource(R.string.history_empty_text),
                     fontSize = 14.sp, color = FitCoachColors.TextSecondary, textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
-                TextButton(onClick = onOpenPrograms) { Text("Посмотреть программы", color = FitCoachColors.Accent) }
+                TextButton(onClick = onOpenPrograms) { Text(stringResource(R.string.history_empty_programs), color = FitCoachColors.Accent) }
             }
             return@Scaffold
         }
@@ -135,24 +138,24 @@ private fun HistoryCard(item: HistoryItem, date: String, onClick: () -> Unit) {
                 Text(date, fontSize = 12.sp, color = FitCoachColors.TextMuted)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    (isActivity?.emoji?.let { "$it " } ?: "") + item.title,
+                    (isActivity?.emoji?.let { "$it " } ?: "") + item.title.tr(),
                     fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
                     color = if (w.isCompleted) FitCoachColors.Accent else FitCoachColors.TextSecondary
                 )
-                Text(item.subtitle, fontSize = 12.sp, color = FitCoachColors.TextSecondary)
+                Text(workoutSubtitle(w), fontSize = 12.sp, color = FitCoachColors.TextSecondary)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    w.durationMinutes?.takeIf { it > 0 }?.let { Meta("⏱ $it мин") }
-                    if (item.totalSets > 0) Meta("${item.doneSets}/${item.totalSets} подходов")
-                    if (item.volumeKg > 0) Meta("${item.volumeKg} кг")
+                    w.durationMinutes?.takeIf { it > 0 }?.let { Meta(stringResource(R.string.history_duration, it)) }
+                    if (item.totalSets > 0) Meta(stringResource(R.string.history_sets, item.doneSets, item.totalSets))
+                    if (item.volumeKg > 0) Meta(stringResource(R.string.format_kg, item.volumeKg.toString()))
                 }
             }
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (w.isCompleted) Icon(Icons.Default.CheckCircle, contentDescription = "Выполнена", tint = FitCoachColors.Success)
-                else Icon(Icons.Default.RadioButtonUnchecked, contentDescription = "Не завершена", tint = FitCoachColors.TextMuted)
+                if (w.isCompleted) Icon(Icons.Default.CheckCircle, contentDescription = stringResource(R.string.history_completed), tint = FitCoachColors.Success)
+                else Icon(Icons.Default.RadioButtonUnchecked, contentDescription = stringResource(R.string.history_not_completed), tint = FitCoachColors.TextMuted)
                 if (w.painLevel > 0) {
                     Text(
-                        "Дискомфорт ${w.painLevel}/10", fontSize = 11.sp,
+                        stringResource(R.string.history_discomfort, w.painLevel), fontSize = 11.sp,
                         color = when { w.painLevel <= 3 -> FitCoachColors.Success; w.painLevel <= 6 -> FitCoachColors.Warning; else -> FitCoachColors.Error }
                     )
                 }

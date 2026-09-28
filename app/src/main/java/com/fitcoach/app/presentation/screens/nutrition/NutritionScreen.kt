@@ -11,15 +11,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.model.*
 import com.fitcoach.app.domain.repository.NutritionRepository
 import com.fitcoach.app.domain.repository.UserRepository
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.*
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -77,22 +80,22 @@ fun NutritionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Питание", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
+                Text(stringResource(R.string.nutrition_title), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
                 Spacer(Modifier.height(8.dp))
             }
 
             item {
                 FitCard {
-                    Text("КБЖУ ЗА ДЕНЬ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                    Text(stringResource(R.string.nutrition_daily), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularProgress(nut.calories.toFloat(), profile.calorieGoal.toFloat(), FitCoachColors.Accent, "ккал")
-                        CircularProgress(nut.proteinG, profile.proteinGoal.toFloat(), FitCoachColors.PhaseBlue, "белок г")
+                        CircularProgress(nut.calories.toFloat(), profile.calorieGoal.toFloat(), FitCoachColors.Accent, stringResource(R.string.nutrition_kcal))
+                        CircularProgress(nut.proteinG, profile.proteinGoal.toFloat(), FitCoachColors.PhaseBlue, stringResource(R.string.nutrition_protein_g))
                     }
                     Spacer(Modifier.height(12.dp))
-                    LabeledProgressBar(nut.carbsG, profile.carbsGoal.toFloat(), FitCoachColors.PhaseOrange, "Углеводы", "${nut.carbsG.toInt()}/${profile.carbsGoal}г")
+                    LabeledProgressBar(nut.carbsG, profile.carbsGoal.toFloat(), FitCoachColors.PhaseOrange, stringResource(R.string.nutrition_carbs), stringResource(R.string.nutrition_ratio_g, nut.carbsG.toInt(), profile.carbsGoal))
                     Spacer(Modifier.height(8.dp))
-                    LabeledProgressBar(nut.fatG, profile.fatGoal.toFloat(), FitCoachColors.Warning, "Жиры", "${nut.fatG.toInt()}/${profile.fatGoal}г")
+                    LabeledProgressBar(nut.fatG, profile.fatGoal.toFloat(), FitCoachColors.Warning, stringResource(R.string.nutrition_fat), stringResource(R.string.nutrition_ratio_g, nut.fatG.toInt(), profile.fatGoal))
                 }
             }
 
@@ -127,17 +130,17 @@ private fun MealCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(mealType.displayName, fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
+                Text(mealType.displayName.tr(), fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
                 if (entries.isNotEmpty()) {
                     Text(
-                        text = "${entries.sumOf { it.calories }} ккал · Б${entries.sumOf { it.proteinG.toDouble() }.toInt()}г",
+                        text = stringResource(R.string.nutrition_meal_summary, entries.sumOf { it.calories }, entries.sumOf { it.proteinG.toDouble() }.toInt()),
                         fontSize = 12.sp,
                         color = FitCoachColors.TextMuted
                     )
                 }
             }
             IconButton(onClick = onAdd) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить", tint = FitCoachColors.Accent)
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.common_add), tint = FitCoachColors.Accent)
             }
         }
 
@@ -151,7 +154,7 @@ private fun MealCard(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(entry.name, fontSize = 14.sp, color = FitCoachColors.TextPrimary)
-                        Text("${entry.calories} ккал · Б${entry.proteinG.toInt()}/У${entry.carbsG.toInt()}/Ж${entry.fatG.toInt()}г",
+                        Text(stringResource(R.string.nutrition_entry_macros, entry.calories, entry.proteinG.toInt(), entry.carbsG.toInt(), entry.fatG.toInt()),
                             fontSize = 11.sp, color = FitCoachColors.TextMuted)
                     }
                     IconButton(onClick = { onDelete(entry) }, modifier = Modifier.size(32.dp)) {

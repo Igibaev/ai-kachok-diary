@@ -17,10 +17,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.program.WorkoutTitles
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.RingProgress
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +52,7 @@ fun RestTimerSheet(rest: RestState, onAdjust: (Int) -> Unit, onSkip: () -> Unit)
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(if (rest.finished) "ПОЕХАЛИ!" else "ОТДЫХ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+            Text(stringResource(if (rest.finished) R.string.workout_rest_go else R.string.workout_rest_label), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
 
             Box(contentAlignment = Alignment.Center) {
                 RingProgress(
@@ -68,18 +71,18 @@ fun RestTimerSheet(rest: RestState, onAdjust: (Int) -> Unit, onSkip: () -> Unit)
                     onClick = { onAdjust(-15) },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.TextPrimary),
                     border = BorderStroke(1.dp, FitCoachColors.Border), shape = RoundedCornerShape(12.dp)
-                ) { Text("−15 сек") }
+                ) { Text(stringResource(R.string.workout_rest_minus)) }
                 OutlinedButton(
                     onClick = { onAdjust(15) },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.TextPrimary),
                     border = BorderStroke(1.dp, FitCoachColors.Border), shape = RoundedCornerShape(12.dp)
-                ) { Text("+15 сек") }
+                ) { Text(stringResource(R.string.workout_rest_plus)) }
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("СЛЕДУЮЩЕЕ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
-                Text(rest.nextExerciseName, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = FitCoachColors.TextPrimary)
-                Text("Сет ${rest.nextSetNumber}", fontSize = 13.sp, color = FitCoachColors.Accent)
+                Text(stringResource(R.string.workout_rest_next), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                Text(rest.nextExerciseName?.tr() ?: stringResource(R.string.workout_rest_next_exercise), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = FitCoachColors.TextPrimary)
+                Text(stringResource(R.string.component_set_number, rest.nextSetNumber), fontSize = 13.sp, color = FitCoachColors.Accent)
             }
 
             Button(
@@ -87,7 +90,7 @@ fun RestTimerSheet(rest: RestState, onAdjust: (Int) -> Unit, onSkip: () -> Unit)
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn),
                 shape = RoundedCornerShape(14.dp)
-            ) { Text(if (rest.finished) "Продолжить" else "Пропустить", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(if (rest.finished) R.string.common_continue else R.string.common_skip), fontWeight = FontWeight.Bold) }
         }
     }
 }

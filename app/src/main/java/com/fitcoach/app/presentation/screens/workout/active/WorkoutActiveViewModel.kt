@@ -33,7 +33,8 @@ enum class WorkoutPhase { Warmup, Exercises, Cooldown, Feedback, Summary }
 data class RestState(
     val remainingSeconds: Int,
     val totalSeconds: Int,
-    val nextExerciseName: String,
+    /** null — «Следующее упражнение» (подставляет UI). */
+    val nextExerciseName: String?,
     val nextSetNumber: Int,
     /** Дошёл до нуля — UI даёт вибрацию и сигнал. */
     val finished: Boolean = false
@@ -60,13 +61,16 @@ data class ExerciseUiState(
     val alternatives: List<String> = emptyList()
 )
 
+/** Личный рекорд: максимальный вес в упражнении выше прошлого лучшего. */
+data class PersonalRecord(val exerciseName: String, val weightKg: Float)
+
 data class WorkoutSummary(
     val title: String,
     val durationMinutes: Int,
     val doneSets: Int,
     val totalSets: Int,
     val volumeKg: Int,
-    val records: List<String>,
+    val records: List<PersonalRecord>,
     val streakWeeks: Int,
     val workoutsThisWeek: Int,
     val completedTotal: Int,
@@ -132,7 +136,7 @@ class WorkoutActiveViewModel @Inject constructor(
             profile = userRepo.getProfile() ?: UserProfile()
             val workout = workoutRepo.getWorkoutById(workoutId)
             template = workout?.let { ProgramCatalog.findTemplate(it.programKey, it.planKey) }
-            val title = workout?.let { WorkoutTitles.titleFor(it) } ?: "Тренировка"
+            val title = workout?.let { WorkoutTitles.titleFor(it) } ?: ""
             _state.update {
                 it.copy(
                     workout = workout, title = title, askPain = Restriction.BACK in profile.restrictions,
@@ -229,7 +233,7 @@ class WorkoutActiveViewModel @Inject constructor(
             val restSeconds = set.restSeconds.takeIf { it > 0 } ?: 90
             startRest(
                 totalSeconds = restSeconds,
-                nextExerciseName = nextInExercise?.exerciseName ?: nextExercise?.name ?: "Следующее упражнение",
+                nextExerciseName = nextInExercise?.exerciseName ?: nextExercise?.name,
                 nextSetNumber = nextInExercise?.setNumber ?: 1
             )
         }
@@ -257,7 +261,7 @@ class WorkoutActiveViewModel @Inject constructor(
 
     // ---------- Отдых ----------
 
-    private fun startRest(totalSeconds: Int, nextExerciseName: String, nextSetNumber: Int) {
+    private fun startRest(totalSeconds: Int, nextExerciseName: String?, nextSetNumber: Int) {
         restJob?.cancel()
         _state.update { it.copy(rest = RestState(totalSeconds, totalSeconds, nextExerciseName, nextSetNumber)) }
         restJob = viewModelScope.launch {
@@ -332,7 +336,7 @@ class WorkoutActiveViewModel @Inject constructor(
             .mapNotNull { (id, list) ->
                 val prev = bestBefore[id] ?: return@mapNotNull null
                 val now = list.maxOf { it.actualWeight!! }
-                if (now > prev) "${list.first().exerciseName}: ${WorkoutTitles.formatWeight(now)} кг" else null
+                if (now > prev) PersonalRecord(list.first().exerciseName, now) else null
             }
 
         val days = profile.daysPerWeek

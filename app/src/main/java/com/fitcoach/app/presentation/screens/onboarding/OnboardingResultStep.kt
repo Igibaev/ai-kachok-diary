@@ -10,18 +10,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.SectionLabel
 import com.fitcoach.app.presentation.theme.FitCoachColors
-
-const val MEDICAL_DISCLAIMER =
-    "Приложение не заменяет врача. Рекомендации по тренировкам и питанию носят общий характер. " +
-        "При хронических заболеваниях, беременности, болях или травмах проконсультируйтесь с врачом " +
-        "и тренером клуба перед началом занятий."
 
 @Composable
 fun ResultStep(state: OnboardingUiState, onConsent: (Boolean) -> Unit) {
@@ -30,70 +28,68 @@ fun ResultStep(state: OnboardingUiState, onConsent: (Boolean) -> Unit) {
     val rec = state.recommendation
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Hint("Мы рассчитали цели и подобрали программу. Всё можно поменять в настройках.")
+        Hint(stringResource(R.string.onboarding_result_hint))
 
         if (goals != null) {
             FitCard {
-                SectionLabel("Дневные цели")
+                SectionLabel(stringResource(R.string.onboarding_result_daily_goals))
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    GoalStat("${goals.calories}", "ккал")
-                    GoalStat("${goals.proteinG}", "белок, г")
-                    GoalStat("${goals.carbsG}", "углев., г")
-                    GoalStat("${goals.fatG}", "жиры, г")
+                    GoalStat("${goals.calories}", stringResource(R.string.onboarding_result_kcal))
+                    GoalStat("${goals.proteinG}", stringResource(R.string.onboarding_result_protein))
+                    GoalStat("${goals.carbsG}", stringResource(R.string.onboarding_result_carbs))
+                    GoalStat("${goals.fatG}", stringResource(R.string.onboarding_result_fat))
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("💧 Вода: ${goals.waterMl} мл в день", fontSize = 13.sp, color = FitCoachColors.Water)
+                Text(stringResource(R.string.onboarding_result_water, goals.waterMl), fontSize = 13.sp, color = FitCoachColors.Water)
             }
         }
 
         if (rec != null) {
             FitCard {
-                SectionLabel("Рекомендуемая программа")
+                SectionLabel(stringResource(R.string.onboarding_result_program))
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(rec.program.emoji, fontSize = 28.sp)
                     Column {
-                        Text(rec.program.title, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.Accent)
-                        Text(rec.program.subtitle, fontSize = 12.sp, color = FitCoachColors.TextSecondary)
+                        Text(rec.program.title.tr(), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.Accent)
+                        Text(rec.program.subtitle.tr(), fontSize = 12.sp, color = FitCoachColors.TextSecondary)
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(rec.program.description, fontSize = 13.sp, color = FitCoachColors.TextSecondary)
-                Text("12 недель · 3 фазы · гибкий график", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                Text(rec.program.description.tr(), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
+                Text(stringResource(R.string.onboarding_result_program_meta), fontSize = 12.sp, color = FitCoachColors.TextMuted)
             }
 
             if (rec.needsTrainerConsult) {
                 FitCard {
-                    Text("🤍 Рекомендуем персональную консультацию тренера", fontWeight = FontWeight.Bold, color = FitCoachColors.Warning)
+                    Text(stringResource(R.string.onboarding_result_consult_title), fontWeight = FontWeight.Bold, color = FitCoachColors.Warning)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Беременность и послеродовой период требуют индивидуального подхода. " +
-                            "Программа «Старт» — щадящая, но тренер клуба ${BrandConfig.clubName} подберёт нагрузку лично для тебя.",
+                        stringResource(R.string.onboarding_result_consult_text, BrandConfig.clubName),
                         fontSize = 13.sp, color = FitCoachColors.TextSecondary
                     )
                     if (BrandConfig.hasWhatsapp) {
                         Spacer(Modifier.height(10.dp))
+                        val whatsappText = stringResource(R.string.onboarding_result_consult_whatsapp, BrandConfig.appName)
                         Button(
                             onClick = {
-                                val url = BrandConfig.whatsappUrl(
-                                    "Здравствуйте! Пишу из приложения ${BrandConfig.appName}. Хочу консультацию тренера по тренировкам в период беременности / после родов."
-                                )
+                                val url = BrandConfig.whatsappUrl(whatsappText)
                                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Success, contentColor = FitCoachColors.Background),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Написать тренеру в WhatsApp", fontWeight = FontWeight.Bold) }
+                        ) { Text(stringResource(R.string.onboarding_result_consult_button), fontWeight = FontWeight.Bold) }
                     }
                 }
             }
         }
 
         FitCard {
-            SectionLabel("Важно")
+            SectionLabel(stringResource(R.string.onboarding_result_important))
             Spacer(Modifier.height(6.dp))
-            Text(MEDICAL_DISCLAIMER, fontSize = 12.sp, color = FitCoachColors.TextSecondary)
+            Text(stringResource(R.string.onboarding_result_disclaimer), fontSize = 12.sp, color = FitCoachColors.TextSecondary)
         }
 
         Row(
@@ -106,7 +102,7 @@ fun ResultStep(state: OnboardingUiState, onConsent: (Boolean) -> Unit) {
                 colors = CheckboxDefaults.colors(checkedColor = FitCoachColors.Accent, checkmarkColor = FitCoachColors.AccentOn, uncheckedColor = FitCoachColors.TextMuted)
             )
             Text(
-                "Согласен на обработку данных о здоровье (вес, ограничения, самочувствие) для персонализации программы. Данные хранятся на устройстве.",
+                stringResource(R.string.onboarding_result_consent),
                 fontSize = 12.sp, color = FitCoachColors.TextPrimary
             )
         }

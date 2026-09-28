@@ -14,11 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.program.WorkoutTitles
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.PrimaryButton
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -42,9 +45,11 @@ fun WorkoutActiveScreen(
     Box(modifier = Modifier.fillMaxSize().background(FitCoachColors.Background)) {
         when (state.phase) {
             WorkoutPhase.Warmup -> RoutineScreen(
-                label = "РАЗМИНКА", title = "Подготовь тело", subtitle = state.title,
-                items = state.warmupItems.map { it.name to it.durationSeconds },
-                buttonText = "Начать упражнения", buttonColor = FitCoachColors.Accent,
+                label = stringResource(R.string.workout_warmup_label),
+                title = stringResource(R.string.workout_warmup_title),
+                subtitle = state.title.tr().ifBlank { stringResource(R.string.workout_default_title) },
+                items = state.warmupItems.map { it.name.tr() to it.durationSeconds },
+                buttonText = stringResource(R.string.workout_warmup_start), buttonColor = FitCoachColors.Accent,
                 onNext = viewModel::startExercises, onSkip = viewModel::startExercises
             )
 
@@ -62,9 +67,11 @@ fun WorkoutActiveScreen(
             )
 
             WorkoutPhase.Cooldown -> RoutineScreen(
-                label = "ЗАМИНКА", title = "Восстановление", subtitle = "Растяжка снижает крепатуру",
-                items = state.cooldownItems.map { it.name to it.durationSeconds },
-                buttonText = "Завершить тренировку", buttonColor = FitCoachColors.Success,
+                label = stringResource(R.string.workout_cooldown_label),
+                title = stringResource(R.string.workout_cooldown_title),
+                subtitle = stringResource(R.string.workout_cooldown_subtitle),
+                items = state.cooldownItems.map { it.name.tr() to it.durationSeconds },
+                buttonText = stringResource(R.string.workout_cooldown_finish), buttonColor = FitCoachColors.Success,
                 onNext = viewModel::finishCooldown, onSkip = viewModel::finishCooldown
             )
 
@@ -99,7 +106,7 @@ private fun ExercisesContent(
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         WorkoutProgressHeader(
-            title = state.title,
+            title = state.title.tr().ifBlank { stringResource(R.string.workout_default_title) },
             doneSets = state.doneSets,
             totalSets = state.totalSets,
             elapsed = WorkoutTitles.formatDuration(state.elapsedSeconds),
@@ -126,7 +133,7 @@ private fun ExercisesContent(
                 )
             }
             Text(
-                "Подсказка: долгое нажатие на выполненный подход — отменить",
+                stringResource(R.string.workout_undo_hint),
                 fontSize = 12.sp, color = FitCoachColors.TextMuted,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
@@ -136,7 +143,7 @@ private fun ExercisesContent(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = FitCoachColors.TextSecondary),
                 border = BorderStroke(1.dp, FitCoachColors.Border),
                 shape = RoundedCornerShape(12.dp)
-            ) { Text("Завершить досрочно") }
+            ) { Text(stringResource(R.string.workout_finish_early)) }
             Spacer(Modifier.height(32.dp))
         }
     }
@@ -170,12 +177,12 @@ private fun RoutineScreen(
             }
         }
         if (items.isEmpty()) {
-            Text("Разминка на своё усмотрение: 5–8 минут лёгкого кардио и суставная гимнастика.", color = FitCoachColors.TextSecondary)
+            Text(stringResource(R.string.workout_routine_empty), color = FitCoachColors.TextSecondary)
         }
         Spacer(Modifier.weight(1f))
         PrimaryButton(text = buttonText, onClick = onNext, containerColor = buttonColor)
         TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("Пропустить", color = FitCoachColors.TextMuted)
+            Text(stringResource(R.string.common_skip), color = FitCoachColors.TextMuted)
         }
     }
 }

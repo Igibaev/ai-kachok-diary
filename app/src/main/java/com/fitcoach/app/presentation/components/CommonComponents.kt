@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -146,9 +148,9 @@ fun CircularProgress(
 @Composable
 fun PhaseChip(phase: Int, week: Int) {
     val (color, name) = when (phase) {
-        1 -> FitCoachColors.PhaseBlue to "Фаза I"
-        2 -> FitCoachColors.PhaseOrange to "Фаза II"
-        else -> FitCoachColors.PhaseAccent to "Фаза III"
+        1 -> FitCoachColors.PhaseBlue to stringResource(R.string.component_phase_1)
+        2 -> FitCoachColors.PhaseOrange to stringResource(R.string.component_phase_2)
+        else -> FitCoachColors.PhaseAccent to stringResource(R.string.component_phase_3)
     }
     Row(
         modifier = Modifier
@@ -166,7 +168,7 @@ fun PhaseChip(phase: Int, week: Int) {
                 .background(color)
         )
         Text(
-            text = "$name · Нед. $week",
+            text = stringResource(R.string.component_phase_week, name, week),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = color
@@ -198,7 +200,7 @@ fun SetButton(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = if (isDone) "✓" else "Сет $setNumber",
+                text = if (isDone) "✓" else stringResource(R.string.component_set_number, setNumber),
                 fontWeight = FontWeight.Bold,
                 color = textColor,
                 fontSize = 14.sp

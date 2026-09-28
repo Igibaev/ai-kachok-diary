@@ -21,10 +21,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.presentation.components.PrimaryButton
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -50,7 +52,7 @@ fun OnboardingScreen(onFinished: () -> Unit, viewModel: OnboardingViewModel = hi
         ) {
             IconButton(onClick = viewModel::back, enabled = step.ordinal > 0) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад",
+                    Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back),
                     tint = if (step.ordinal > 0) FitCoachColors.TextPrimary else FitCoachColors.Background
                 )
             }
@@ -77,7 +79,7 @@ fun OnboardingScreen(onFinished: () -> Unit, viewModel: OnboardingViewModel = hi
                 Text(BrandConfig.appName, style = MaterialTheme.typography.labelSmall, color = FitCoachColors.Accent)
                 Spacer(Modifier.height(4.dp))
             }
-            Text(step.title, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
+            Text(stringResource(step.titleRes), fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.TextPrimary)
             Spacer(Modifier.height(20.dp))
 
             AnimatedContent(
@@ -107,12 +109,12 @@ fun OnboardingScreen(onFinished: () -> Unit, viewModel: OnboardingViewModel = hi
         Box(Modifier.padding(horizontal = 24.dp, vertical = 16.dp).navigationBarsPadding()) {
             if (step == OnboardingStep.RESULT) {
                 PrimaryButton(
-                    text = if (state.saving) "Сохраняем…" else "Начать путь",
+                    text = stringResource(if (state.saving) R.string.onboarding_saving else R.string.onboarding_start),
                     enabled = state.canProceed && !state.saving,
                     onClick = { viewModel.finish(onFinished) }
                 )
             } else {
-                PrimaryButton(text = "Далее", enabled = state.canProceed, onClick = viewModel::next)
+                PrimaryButton(text = stringResource(R.string.common_next), enabled = state.canProceed, onClick = viewModel::next)
             }
         }
     }

@@ -19,7 +19,9 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -92,16 +94,16 @@ class MainViewModel @Inject constructor(userRepository: UserRepository) : ViewMo
 
 data class BottomNavItem(
     val screen: Screen,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector
 )
 
 private val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard, "Главная", Icons.Default.Home),
-    BottomNavItem(Screen.WorkoutHistory, "Тренировки", Icons.Default.FitnessCenter),
-    BottomNavItem(Screen.Nutrition, "Питание", Icons.Default.Restaurant),
-    BottomNavItem(Screen.Progress, "Прогресс", Icons.AutoMirrored.Filled.TrendingUp),
-    BottomNavItem(Screen.Club, "Клуб", Icons.Default.Storefront)
+    BottomNavItem(Screen.Dashboard, R.string.nav_home, Icons.Default.Home),
+    BottomNavItem(Screen.WorkoutHistory, R.string.nav_workouts, Icons.Default.FitnessCenter),
+    BottomNavItem(Screen.Nutrition, R.string.nav_nutrition, Icons.Default.Restaurant),
+    BottomNavItem(Screen.Progress, R.string.nav_progress, Icons.AutoMirrored.Filled.TrendingUp),
+    BottomNavItem(Screen.Club, R.string.nav_club, Icons.Default.Storefront)
 )
 
 @Composable
@@ -124,9 +126,10 @@ private fun MainAppContent(startDestination: String) {
                 ) {
                     bottomNavItems.forEach { item ->
                         val selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true
+                        val label = stringResource(item.labelRes)
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            icon = { Icon(item.icon, contentDescription = label) },
+                            label = { Text(label) },
                             selected = selected,
                             onClick = {
                                 navController.navigate(item.screen.route) {

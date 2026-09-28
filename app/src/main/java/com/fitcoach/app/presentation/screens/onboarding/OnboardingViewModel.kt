@@ -1,9 +1,11 @@
 package com.fitcoach.app.presentation.screens.onboarding
 
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.brand.BrandConfig
 import com.fitcoach.app.domain.model.Goal
 import com.fitcoach.app.domain.model.Level
@@ -22,16 +24,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class OnboardingStep(val title: String) {
-    LANGUAGE("Язык / Тіл"),
-    NAME("Как тебя зовут?"),
-    SEX_AGE("Пол и возраст"),
-    BODY("Рост и вес"),
-    GOAL("Твоя цель"),
-    LEVEL("Уровень подготовки"),
-    DAYS("Сколько дней в неделю?"),
-    RESTRICTIONS("Ограничения по здоровью"),
-    RESULT("Твой план готов");
+enum class OnboardingStep(@StringRes val titleRes: Int) {
+    LANGUAGE(R.string.onboarding_step_language),
+    NAME(R.string.onboarding_step_name),
+    SEX_AGE(R.string.onboarding_step_sex_age),
+    BODY(R.string.onboarding_step_body),
+    GOAL(R.string.onboarding_step_goal),
+    LEVEL(R.string.onboarding_step_level),
+    DAYS(R.string.onboarding_step_days),
+    RESTRICTIONS(R.string.onboarding_step_restrictions),
+    RESULT(R.string.onboarding_step_result);
 
     val progress: Float get() = (ordinal + 1f) / entries.size
 }

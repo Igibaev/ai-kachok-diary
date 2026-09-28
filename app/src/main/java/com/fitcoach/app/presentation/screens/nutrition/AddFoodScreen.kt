@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.model.MealType
 import com.fitcoach.app.domain.model.NutritionEntry
 import com.fitcoach.app.domain.repository.NutritionRepository
@@ -113,10 +115,10 @@ fun AddFoodScreen(
         containerColor = FitCoachColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text("Добавить еду", color = FitCoachColors.TextPrimary) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = FitCoachColors.TextPrimary) } },
+                title = { Text(stringResource(R.string.addfood_title), color = FitCoachColors.TextPrimary) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = FitCoachColors.TextPrimary) } },
                 actions = {
-                    TextButton(onClick = { showManual = true }) { Text("Вручную", color = FitCoachColors.Accent) }
+                    TextButton(onClick = { showManual = true }) { Text(stringResource(R.string.addfood_manual), color = FitCoachColors.Accent) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = FitCoachColors.Surface)
             )
@@ -127,7 +129,7 @@ fun AddFoodScreen(
                 value = query,
                 onValueChange = { query = it; viewModel.search(it) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Поиск продукта...", color = FitCoachColors.TextMuted) },
+                placeholder = { Text(stringResource(R.string.addfood_search), color = FitCoachColors.TextMuted) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = FitCoachColors.TextMuted) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = FitCoachColors.TextPrimary,
@@ -153,11 +155,11 @@ fun AddFoodScreen(
             title = { Text(template.name, color = FitCoachColors.TextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${template.calories} ккал на ${template.grams ?: 100}г", color = FitCoachColors.TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.addfood_kcal_per, template.calories, (template.grams ?: 100f).toInt()), color = FitCoachColors.TextSecondary, fontSize = 13.sp)
                     OutlinedTextField(
                         value = gramsInput,
                         onValueChange = { gramsInput = it },
-                        label = { Text("Граммы", color = FitCoachColors.TextMuted) },
+                        label = { Text(stringResource(R.string.addfood_grams), color = FitCoachColors.TextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = FitCoachColors.TextPrimary, unfocusedTextColor = FitCoachColors.TextPrimary,
@@ -174,10 +176,10 @@ fun AddFoodScreen(
                         selectedTemplate = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent)
-                ) { Text("Добавить", color = FitCoachColors.Background) }
+                ) { Text(stringResource(R.string.common_add), color = FitCoachColors.Background) }
             },
             dismissButton = {
-                TextButton(onClick = { selectedTemplate = null }) { Text("Отмена", color = FitCoachColors.TextMuted) }
+                TextButton(onClick = { selectedTemplate = null }) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) }
             }
         )
     }
@@ -199,7 +201,7 @@ private fun FoodItem(food: NutritionEntry, onClick: () -> Unit) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(food.name, fontWeight = FontWeight.Medium, color = FitCoachColors.TextPrimary, fontSize = 14.sp)
-                Text("${food.calories} ккал · Б${food.proteinG.toInt()}/У${food.carbsG.toInt()}/Ж${food.fatG.toInt()}г · ${food.grams?.toInt() ?: 100}г",
+                Text(stringResource(R.string.addfood_item_macros, food.calories, food.proteinG.toInt(), food.carbsG.toInt(), food.fatG.toInt(), food.grams?.toInt() ?: 100),
                     fontSize = 11.sp, color = FitCoachColors.TextMuted)
             }
             Icon(Icons.Default.Add, null, tint = FitCoachColors.Accent)
@@ -219,16 +221,16 @@ private fun ManualFoodDialog(onDismiss: () -> Unit, onAdd: (String, Int, Float, 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = FitCoachColors.Card,
-        title = { Text("Добавить вручную", color = FitCoachColors.TextPrimary) },
+        title = { Text(stringResource(R.string.addfood_manual_title), color = FitCoachColors.TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    "Название" to name,
-                    "Калории" to calories,
-                    "Белок (г)" to protein,
-                    "Углеводы (г)" to carbs,
-                    "Жиры (г)" to fat,
-                    "Граммы" to grams
+                    stringResource(R.string.addfood_name) to name,
+                    stringResource(R.string.addfood_calories) to calories,
+                    stringResource(R.string.addfood_protein) to protein,
+                    stringResource(R.string.addfood_carbs) to carbs,
+                    stringResource(R.string.addfood_fat) to fat,
+                    stringResource(R.string.addfood_grams) to grams
                 ).forEachIndexed { idx, (label, value) ->
                     OutlinedTextField(
                         value = value,
@@ -258,8 +260,8 @@ private fun ManualFoodDialog(onDismiss: () -> Unit, onAdd: (String, Int, Float, 
                 },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent)
-            ) { Text("Добавить", color = FitCoachColors.Background) }
+            ) { Text(stringResource(R.string.common_add), color = FitCoachColors.Background) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = FitCoachColors.TextMuted) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
     )
 }

@@ -17,11 +17,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitcoach.app.R
 import com.fitcoach.app.domain.model.ExerciseSet
+import com.fitcoach.app.l10n.tr
 import com.fitcoach.app.domain.program.WorkoutTitles
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -43,11 +46,11 @@ fun WorkoutProgressHeader(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = FitCoachColors.TextPrimary, maxLines = 1)
-                Text("$doneSets из $totalSets подходов", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.workout_sets_progress, doneSets, totalSets), fontSize = 12.sp, color = FitCoachColors.TextMuted)
             }
             Text(elapsed, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.Accent)
             IconButton(onClick = onOpenChat) {
-                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "AI-тренер", tint = FitCoachColors.TextMuted)
+                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = stringResource(R.string.workout_ai_coach), tint = FitCoachColors.TextMuted)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -76,10 +79,10 @@ fun ExerciseCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 if (exercise.muscleGroup.isNotEmpty()) {
-                    Text(exercise.muscleGroup.uppercase(), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
+                    Text(exercise.muscleGroup.tr().uppercase(), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
                 }
                 Text(
-                    exercise.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                    exercise.name.tr(), fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
                     color = if (allDone) FitCoachColors.Success else FitCoachColors.TextPrimary
                 )
                 if (exercise.tip.isNotEmpty()) {
@@ -89,21 +92,21 @@ fun ExerciseCard(
             }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Меню", tint = FitCoachColors.TextMuted)
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.workout_menu), tint = FitCoachColors.TextMuted)
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
-                        text = { Text("Техника (YouTube)") },
+                        text = { Text(stringResource(R.string.workout_technique_youtube)) },
                         leadingIcon = { Icon(Icons.Default.PlayCircle, null, tint = FitCoachColors.Error) },
                         onClick = { menuOpen = false; onOpenYoutube() }
                     )
                     if (exercise.alternatives.isNotEmpty()) {
                         HorizontalDivider()
-                        Text("Заменить упражнение", fontSize = 11.sp, color = FitCoachColors.TextMuted,
+                        Text(stringResource(R.string.workout_replace_exercise), fontSize = 11.sp, color = FitCoachColors.TextMuted,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                         exercise.alternatives.forEach { alt ->
                             DropdownMenuItem(
-                                text = { Text(alt) },
+                                text = { Text(alt.tr()) },
                                 leadingIcon = { Icon(Icons.Default.SwapHoriz, null, tint = FitCoachColors.Accent) },
                                 onClick = { menuOpen = false; onReplace(alt) }
                             )
@@ -113,7 +116,7 @@ fun ExerciseCard(
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text("$done/${exercise.sets.size} подходов", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+        Text(stringResource(R.string.workout_sets_done, done, exercise.sets.size), fontSize = 12.sp, color = FitCoachColors.TextMuted)
         Spacer(Modifier.height(8.dp))
         exercise.sets.chunked(2).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,15 +149,13 @@ fun SetChip(set: ExerciseSet, onClick: () -> Unit, onUndo: () -> Unit, modifier:
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (set.isDone) "✓ Сет ${set.setNumber}" else "Сет ${set.setNumber}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = text)
+            Text(stringResource(if (set.isDone) R.string.workout_set_done else R.string.component_set_number, set.setNumber), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = text)
             val sub = if (set.isDone) {
-                buildString {
-                    append(set.actualReps ?: set.targetReps)
-                    set.actualWeight?.let { append(" × ").append(WorkoutTitles.formatWeight(it)).append(" кг") }
-                }
-            } else "${set.targetReps} × ${set.targetWeight}"
+                val reps = set.actualReps ?: set.targetReps
+                set.actualWeight?.let { stringResource(R.string.workout_set_result, reps, WorkoutTitles.formatWeight(it)) } ?: reps.toString()
+            } else stringResource(R.string.workout_set_target, set.targetReps, set.targetWeight.tr())
             Text(sub, fontSize = 12.sp, color = if (set.isDone) FitCoachColors.Success.copy(alpha = 0.8f) else FitCoachColors.TextSecondary)
-            if (set.isDone) Text("отменить", fontSize = 10.sp, color = FitCoachColors.TextMuted)
+            if (set.isDone) Text(stringResource(R.string.workout_set_undo), fontSize = 10.sp, color = FitCoachColors.TextMuted)
         }
     }
 }
@@ -174,8 +175,8 @@ fun SetInputDialog(input: SetInput, onDismiss: () -> Unit, onConfirm: (reps: Int
         containerColor = FitCoachColors.Card,
         title = {
             Column {
-                Text("Сет ${input.set.setNumber}", color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold)
-                Text(input.set.exerciseName, fontSize = 13.sp, color = FitCoachColors.TextSecondary)
+                Text(stringResource(R.string.component_set_number, input.set.setNumber), color = FitCoachColors.TextPrimary, fontWeight = FontWeight.Bold)
+                Text(input.set.exerciseName.tr(), fontSize = 13.sp, color = FitCoachColors.TextSecondary)
             }
         },
         text = {
@@ -183,33 +184,33 @@ fun SetInputDialog(input: SetInput, onDismiss: () -> Unit, onConfirm: (reps: Int
                 val last = input.lastResult
                 Text(
                     text = if (last?.actualWeight != null) {
-                        "Прошлый раз: ${WorkoutTitles.formatWeight(last.actualWeight)} кг × ${last.actualReps ?: last.targetReps}"
-                    } else "План: ${input.set.targetReps} × ${input.set.targetWeight}",
+                        stringResource(R.string.workout_set_last_time, WorkoutTitles.formatWeight(last.actualWeight), last.actualReps ?: last.targetReps)
+                    } else stringResource(R.string.workout_set_plan, input.set.targetReps, input.set.targetWeight.tr()),
                     fontSize = 13.sp, color = FitCoachColors.Accent
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = reps, onValueChange = { reps = it.filter { c -> c.isDigit() }.take(3) },
-                        label = { Text("Повторы", color = FitCoachColors.TextMuted) },
+                        label = { Text(stringResource(R.string.workout_set_reps), color = FitCoachColors.TextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true, colors = fieldColors, modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = weight, onValueChange = { weight = it.replace(',', '.').filter { c -> c.isDigit() || c == '.' }.take(6) },
-                        label = { Text("Вес, кг", color = FitCoachColors.TextMuted) },
+                        label = { Text(stringResource(R.string.workout_set_weight), color = FitCoachColors.TextMuted) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true, colors = fieldColors, modifier = Modifier.weight(1f)
                     )
                 }
-                Text("Вес можно не указывать (собственный вес, время).", fontSize = 11.sp, color = FitCoachColors.TextMuted)
+                Text(stringResource(R.string.workout_set_weight_optional), fontSize = 11.sp, color = FitCoachColors.TextMuted)
             }
         },
         confirmButton = {
             Button(
                 onClick = { onConfirm(reps.toIntOrNull() ?: input.defaultReps, weight.toFloatOrNull()) },
                 colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent, contentColor = FitCoachColors.AccentOn)
-            ) { Text("Готово", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(R.string.common_done), fontWeight = FontWeight.Bold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = FitCoachColors.TextMuted) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = FitCoachColors.TextMuted) } }
     )
 }
