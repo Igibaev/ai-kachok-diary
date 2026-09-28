@@ -18,6 +18,7 @@ import com.fitcoach.app.domain.repository.WorkoutRepository
 import com.fitcoach.app.domain.usecase.ai.BuildSystemPromptUseCase
 import com.fitcoach.app.domain.usecase.ai.PromptContext
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -78,6 +79,8 @@ class ChatViewModel @Inject constructor(
     fun sendMessage(userInput: String) {
         val text = userInput.trim()
         if (text.isEmpty() || _state.value.isTyping) return
+        // Флаг ставим синхронно, до запуска корутины — иначе двойной тап успевает отправить дважды.
+        _state.update { it.copy(isTyping = true) }
         viewModelScope.launch {
             // История берётся ДО сохранения нового сообщения: текущий вопрос уходит отдельно.
             val history = chatRepository.getRecentMessages(HISTORY_LIMIT).filter { !it.isError }
@@ -88,7 +91,6 @@ class ChatViewModel @Inject constructor(
                 timestamp = System.currentTimeMillis()
             )
             chatRepository.saveMessage(userMsg)
-            _state.update { it.copy(isTyping = true) }
 
             val profile = userRepository.getProfile() ?: UserProfile()
             val locale = profile.language.ifBlank { BrandConfig.defaultLanguage }
@@ -101,6 +103,8 @@ class ChatViewModel @Inject constructor(
                     onSuccess = { reply -> saveAssistant(reply, isError = false) },
                     onFailure = { e -> saveAssistant(e.message ?: AiErrors.emptyAnswer(locale), isError = true) }
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 saveAssistant(AiErrors.serverUnavailable(locale), isError = true)
             } finally {
