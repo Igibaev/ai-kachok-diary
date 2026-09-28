@@ -1,10 +1,10 @@
 package com.fitcoach.app.di
 
 import com.fitcoach.app.data.repository.*
+import com.fitcoach.app.demo.DemoDataSeederImpl
+import com.fitcoach.app.share.ShareServiceImpl
 import com.fitcoach.app.domain.repository.*
 import com.fitcoach.app.domain.service.DemoDataSeeder
-import com.fitcoach.app.domain.service.NoopDemoDataSeeder
-import com.fitcoach.app.domain.service.NoopShareService
 import com.fitcoach.app.domain.service.ShareService
 import dagger.Binds
 import dagger.Module
@@ -33,13 +33,13 @@ abstract class RepositoryModule {
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
 }
 
-/** Сервисы с заглушками; реальные реализации подменяются агентами (см. CONTRACTS). */
+/** Реальные сервисы «Клуб»: карточки для Stories и демо-данные для презентаций. */
 @Module
 @InstallIn(SingletonComponent::class)
 object ServiceModule {
     @Provides @Singleton
-    fun provideShareService(): ShareService = NoopShareService()
+    fun provideShareService(impl: ShareServiceImpl): ShareService = impl
 
     @Provides @Singleton
-    fun provideDemoDataSeeder(): DemoDataSeeder = NoopDemoDataSeeder()
+    fun provideDemoDataSeeder(impl: DemoDataSeederImpl): DemoDataSeeder = impl
 }
