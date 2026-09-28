@@ -5,8 +5,10 @@ data class ChatMessage(
     val role: String,
     val content: String,
     val timestamp: Long,
-    val contextDate: Long? = null
+    val contextDate: Long? = null,
+    /** Системное сообщение об ошибке: показывается приглушённым пузырём и НЕ отправляется модели. */
+    val isError: Boolean = false
 ) {
     val isUser: Boolean get() = role == "user"
-    val isAssistant: Boolean get() = role == "assistant"
+    val isAssistant: Boolean get() = role == "assistant" && !isError
 }
