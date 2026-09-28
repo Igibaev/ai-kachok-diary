@@ -46,7 +46,8 @@ fun SettingsScreen(
 
     LaunchedEffect(state.message) {
         state.message?.let { msg ->
-            val text = if (msg.arg != null) context.getString(msg.textRes, msg.arg) else context.getString(msg.textRes)
+            val text = msg.arg?.let { context.getString(msg.textRes, it.ifBlank { context.getString(R.string.settings_msg_error) }) }
+                ?: context.getString(msg.textRes)
             snackbar.showSnackbar(text)
             viewModel.consumeMessage()
         }

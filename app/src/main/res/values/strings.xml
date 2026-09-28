@@ -17,9 +17,6 @@
     <string name="common_settings">Настройки</string>
     <string name="unit_kg">кг</string>
     <string name="unit_ml">мл</string>
-    <string name="unit_min">мин</string>
-    <string name="unit_g">г</string>
-    <string name="unit_kcal">ккал</string>
     <string name="unit_cm">см</string>
     <string name="unit_years">лет</string>
     <string name="format_minutes">%1$d мин</string>
@@ -163,7 +160,6 @@
     <string name="workout_ai_coach">AI-тренер</string>
     <string name="workout_menu">Меню</string>
     <string name="workout_technique_youtube">Техника (YouTube)</string>
-    <string name="workout_technique_query">%1$s техника</string>
     <string name="workout_replace_exercise">Заменить упражнение</string>
     <string name="workout_sets_done">%1$d/%2$d подходов</string>
     <string name="workout_set_done">✓ Сет %1$d</string>

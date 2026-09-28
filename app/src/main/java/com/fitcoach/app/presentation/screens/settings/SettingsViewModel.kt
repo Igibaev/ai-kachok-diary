@@ -147,7 +147,7 @@ class SettingsViewModel @Inject constructor(
             it.copy(
                 busy = false,
                 message = if (result.isSuccess) UiMessage(successMessage)
-                else UiMessage(R.string.settings_msg_failed, result.exceptionOrNull()?.message)
+                else UiMessage(R.string.settings_msg_failed, result.exceptionOrNull()?.message ?: "")
             )
         }
     }

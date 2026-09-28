@@ -36,12 +36,10 @@ data class ChatUiState(
     val mode: AiMode = AiMode.DEMO,
     /** Идентификаторы строковых ресурсов быстрых подсказок — текст подставляет UI на текущем языке. */
     val quickPrompts: List<Int> = emptyList(),
-    val coachName: String = BrandConfig.aiCoachName,
-    /** URL WhatsApp клуба для кнопки «Спросить тренера»; null — WhatsApp не настроен. */
-    val trainerWhatsappUrl: String? = null
+    val coachName: String = BrandConfig.aiCoachName
 )
 
-/** Текст лида для кнопки «Спросить тренера» (локализуется на UI-слое). */
+/** URL WhatsApp клуба для кнопки «Спросить тренера» (текст лида — на языке приложения); null — WhatsApp не настроен. */
 fun trainerWhatsappUrl(context: android.content.Context): String? =
     if (BrandConfig.hasWhatsapp) BrandConfig.whatsappUrl(context.getString(R.string.chat_trainer_message, BrandConfig.appName)) else null
 
