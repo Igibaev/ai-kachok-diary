@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitcoach.app.domain.model.ExerciseSet
 import com.fitcoach.app.domain.model.Workout
+import com.fitcoach.app.domain.program.WorkoutTitles
 import com.fitcoach.app.domain.repository.WorkoutRepository
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.theme.FitCoachColors
@@ -65,13 +66,13 @@ fun WorkoutDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val workout = state.workout
-    val df = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("ru"))
+    val df = SimpleDateFormat("d MMMM yyyy, EEEE", Locale.forLanguageTag("ru"))
 
     Scaffold(
         containerColor = FitCoachColors.Background,
         topBar = {
             TopAppBar(
-                title = { Text(workout?.planKey ?: "Тренировка", color = FitCoachColors.TextPrimary) },
+                title = { Text(workout?.let { WorkoutTitles.titleFor(it) } ?: "Тренировка", color = FitCoachColors.TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад", tint = FitCoachColors.TextPrimary)
@@ -91,13 +92,15 @@ fun WorkoutDetailScreen(
                     FitCard {
                         Text(df.format(Date(workout.date)), fontSize = 13.sp, color = FitCoachColors.TextMuted)
                         Spacer(Modifier.height(4.dp))
-                        Text(workout.phaseName, fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
+                        Text(WorkoutTitles.subtitleFor(workout), fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Stat("Статус", if (workout.isCompleted) "Выполнена" else "Не завершена")
                             workout.durationMinutes?.takeIf { it > 0 }?.let { Stat("Время", "$it мин") }
                             if (workout.rpe > 0) Stat("Тяжесть", "${workout.rpe}/10")
                             if (workout.painLevel > 0) Stat("Дискомфорт", "${workout.painLevel}/10")
+                            val volume = WorkoutTitles.volumeKg(state.exercises.flatMap { it.second })
+                            if (volume > 0) Stat("Объём", "$volume кг")
                         }
                     }
                 }
@@ -137,5 +140,4 @@ private fun Stat(label: String, value: String) {
     }
 }
 
-private fun formatWeight(w: Float): String =
-    if (w % 1f == 0f) w.toInt().toString() else String.format(Locale.US, "%.1f", w)
+private fun formatWeight(w: Float): String = WorkoutTitles.formatWeight(w)

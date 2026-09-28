@@ -8,7 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,10 +19,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.fitcoach.app.presentation.components.*
+import com.fitcoach.app.brand.BrandConfig
+import com.fitcoach.app.presentation.components.CircularProgress
+import com.fitcoach.app.presentation.components.FitCard
+import com.fitcoach.app.presentation.components.InfoChip
+import com.fitcoach.app.presentation.components.LabeledProgressBar
+import com.fitcoach.app.presentation.components.SectionLabel
+import com.fitcoach.app.presentation.screens.club.PromoBanner
 import com.fitcoach.app.presentation.theme.FitCoachColors
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(
@@ -34,263 +43,130 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    var activityDialog by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FitCoachColors.Background)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(FitCoachColors.Background)) {
         if (state.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
-                color = FitCoachColors.Accent
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column {
-                        val greeting = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-                            in 5..11 -> "Доброе утро"
-                            in 12..17 -> "Добрый день"
-                            in 18..22 -> "Добрый вечер"
-                            else -> "Привет"
-                        }
-                        Text(
-                            text = "$greeting, ${state.profile.name.ifEmpty { "Атлет" }} 👊",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FitCoachColors.TextPrimary
-                        )
-                        Text(
-                            text = SimpleDateFormat("EEEE, d MMMM", Locale("ru")).format(Date()),
-                            fontSize = 14.sp,
-                            color = FitCoachColors.TextMuted
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = FitCoachColors.TextMuted)
-                    }
-                }
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = FitCoachColors.Accent)
+            return@Box
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Header(name = state.profile.name, onOpenSettings = onOpenSettings, onOpenQrPass = onOpenQrPass)
 
-                // Phase chip
-                val phase = when {
-                    state.currentWeek <= 4 -> 1
-                    state.currentWeek <= 8 -> 2
-                    else -> 3
-                }
-                PhaseChip(phase = phase, week = state.currentWeek)
+            // Акции клуба (реализует агент «Клуб»; скрыт, если акций нет)
+            PromoBanner()
 
-                // Today's workout card
-                FitCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "ТРЕНИРОВКА СЕГОДНЯ",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = FitCoachColors.TextMuted
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            if (state.todayWorkoutKey != null) {
-                                Text(
-                                    text = state.todayWorkoutKey!!,
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = FitCoachColors.Accent
-                                )
-                                val template = com.fitcoach.app.domain.model.WorkoutPlan.getTemplate(state.profile.programKey, state.todayWorkoutKey!!)
-                                Text(
-                                    text = template?.phaseName ?: "",
-                                    fontSize = 14.sp,
-                                    color = FitCoachColors.TextSecondary
-                                )
-                            } else {
-                                Text(
-                                    text = "День отдыха",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = FitCoachColors.TextSecondary
-                                )
-                                Text(
-                                    text = "Восстановление — тоже часть плана",
-                                    fontSize = 12.sp,
-                                    color = FitCoachColors.TextMuted
-                                )
-                            }
-                        }
-                        if (state.todayWorkout?.isCompleted == true) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .background(FitCoachColors.Success.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = FitCoachColors.Success, modifier = Modifier.size(32.dp))
-                            }
-                        }
-                    }
-
-                    if (state.todayWorkoutKey != null && state.todayWorkout?.isCompleted != true) {
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = { viewModel.startTodayWorkout(onStartWorkout) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = FitCoachColors.Accent),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = FitCoachColors.Background)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = if (state.todayWorkout != null) "Продолжить" else "Начать тренировку",
-                                color = FitCoachColors.Background,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                // Water & KBZHU row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Water
-                    FitCard(modifier = Modifier.weight(1f).clickable { onOpenWater() }) {
-                        Text("ВОДА", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
-                        Spacer(Modifier.height(8.dp))
-                        CircularProgress(
-                            value = state.waterToday.toFloat(),
-                            max = state.profile.waterGoalMl.toFloat(),
-                            color = FitCoachColors.PhaseBlue,
-                            label = "мл",
-                            size = 90.dp,
-                            strokeWidth = 8.dp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "${state.waterToday} / ${state.profile.waterGoalMl} мл",
-                            fontSize = 12.sp,
-                            color = FitCoachColors.TextMuted
-                        )
-                    }
-
-                    // KBZHU
-                    FitCard(modifier = Modifier.weight(1f)) {
-                        Text("КБЖУ", style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted)
-                        Spacer(Modifier.height(8.dp))
-                        val nut = state.nutritionSummary
-                        val profile = state.profile
-                        LabeledProgressBar(
-                            value = nut.calories.toFloat(),
-                            max = profile.calorieGoal.toFloat(),
-                            color = FitCoachColors.Accent,
-                            label = "Ккал",
-                            sub = "${nut.calories}/${profile.calorieGoal}"
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        LabeledProgressBar(
-                            value = nut.proteinG,
-                            max = profile.proteinGoal.toFloat(),
-                            color = FitCoachColors.PhaseBlue,
-                            label = "Белок",
-                            sub = "${nut.proteinG.toInt()}г"
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        LabeledProgressBar(
-                            value = nut.carbsG,
-                            max = profile.carbsGoal.toFloat(),
-                            color = FitCoachColors.PhaseOrange,
-                            label = "Углеводы",
-                            sub = "${nut.carbsG.toInt()}г"
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        LabeledProgressBar(
-                            value = nut.fatG,
-                            max = profile.fatGoal.toFloat(),
-                            color = FitCoachColors.Warning,
-                            label = "Жиры",
-                            sub = "${nut.fatG.toInt()}г"
-                        )
-                    }
-                }
-
-                // Stats row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        value = "${state.completedWorkouts}",
-                        label = "Тренировок выполнено"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        value = "${state.currentWeek}/12",
-                        label = "Неделя программы"
-                    )
-                }
-
-                // Quick chat button
-                FitCard(
-                    modifier = Modifier.clickable { onOpenChat() }
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(FitCoachColors.Accent.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🤖", fontSize = 20.sp)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("AI Тренер", fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
-                            Text("Спроси о тренировке или питании", fontSize = 12.sp, color = FitCoachColors.TextMuted)
-                        }
-                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
-                    }
-                }
-
-                Spacer(Modifier.height(80.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                InfoChip("🔥", if (state.streakWeeks > 0) "${state.streakWeeks} ${weeksWord(state.streakWeeks)} подряд" else "Начни стрик")
+                InfoChip("📅", "${state.workoutsThisWeek}/${state.profile.daysPerWeek} на этой неделе")
             }
+
+            NextWorkoutCard(
+                state = state,
+                onStart = { viewModel.startNextWorkout(onStartWorkout) },
+                onLogActivity = { activityDialog = true },
+                onOpenPrograms = onOpenPrograms
+            )
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                FitCard(modifier = Modifier.weight(1f).clickable { onOpenWater() }) {
+                    SectionLabel("Вода")
+                    Spacer(Modifier.height(8.dp))
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgress(
+                            value = state.waterToday.toFloat(), max = state.profile.waterGoalMl.toFloat(),
+                            color = FitCoachColors.Water, label = "мл", size = 90.dp, strokeWidth = 8.dp
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("${state.waterToday} / ${state.profile.waterGoalMl} мл", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                    Text("+ добавить", fontSize = 12.sp, color = FitCoachColors.Water, fontWeight = FontWeight.Medium)
+                }
+                FitCard(modifier = Modifier.weight(1f)) {
+                    SectionLabel("КБЖУ")
+                    Spacer(Modifier.height(8.dp))
+                    val nut = state.nutritionSummary
+                    val p = state.profile
+                    LabeledProgressBar(nut.calories.toFloat(), p.calorieGoal.toFloat(), FitCoachColors.Accent, "Ккал", "${nut.calories}/${p.calorieGoal}")
+                    Spacer(Modifier.height(6.dp))
+                    LabeledProgressBar(nut.proteinG, p.proteinGoal.toFloat(), FitCoachColors.PhaseBlue, "Белок", "${nut.proteinG.toInt()}/${p.proteinGoal} г")
+                    Spacer(Modifier.height(6.dp))
+                    LabeledProgressBar(nut.carbsG, p.carbsGoal.toFloat(), FitCoachColors.PhaseOrange, "Углеводы", "${nut.carbsG.toInt()}/${p.carbsGoal} г")
+                    Spacer(Modifier.height(6.dp))
+                    LabeledProgressBar(nut.fatG, p.fatGoal.toFloat(), FitCoachColors.Warning, "Жиры", "${nut.fatG.toInt()}/${p.fatGoal} г")
+                }
+            }
+
+            FitCard(modifier = Modifier.clickable { onOpenChat() }) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).background(FitCoachColors.AccentSoft),
+                        contentAlignment = Alignment.Center
+                    ) { Text("🤖", fontSize = 20.sp) }
+                    Column(Modifier.weight(1f)) {
+                        Text("AI-тренер ${BrandConfig.aiCoachName}", fontWeight = FontWeight.SemiBold, color = FitCoachColors.TextPrimary)
+                        Text("Спроси о тренировке, питании или технике", fontSize = 12.sp, color = FitCoachColors.TextMuted)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = FitCoachColors.TextMuted, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatCard(Modifier.weight(1f), "${state.completedWorkouts}", "тренировок всего")
+                StatCard(Modifier.weight(1f), "${state.currentWeek}/12", "неделя программы")
+            }
+
+            Spacer(Modifier.height(72.dp))
+        }
+    }
+
+    if (activityDialog) {
+        LogActivityDialog(
+            onDismiss = { activityDialog = false },
+            onConfirm = { type, minutes -> viewModel.logActivity(type, minutes); activityDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun Header(name: String, onOpenSettings: () -> Unit, onOpenQrPass: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Column(Modifier.weight(1f)) {
+            val greeting = when (LocalTime.now().hour) {
+                in 5..11 -> "Доброе утро"
+                in 12..17 -> "Добрый день"
+                in 18..22 -> "Добрый вечер"
+                else -> "Привет"
+            }
+            Text("$greeting, ${name.ifBlank { "Атлет" }} 👊", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = FitCoachColors.TextPrimary)
+            val formatter = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.forLanguageTag("ru")) }
+            Text(LocalDate.now().format(formatter).replaceFirstChar { it.uppercase() }, fontSize = 14.sp, color = FitCoachColors.TextMuted)
+        }
+        IconButton(onClick = onOpenQrPass) {
+            Icon(Icons.Default.CreditCard, contentDescription = "Карта участника", tint = FitCoachColors.Accent)
+        }
+        IconButton(onClick = onOpenSettings) {
+            Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = FitCoachColors.TextMuted)
         }
     }
 }
 
 @Composable
-private fun StatCard(modifier: Modifier = Modifier, value: String, label: String) {
+private fun StatCard(modifier: Modifier, value: String, label: String) {
     FitCard(modifier = modifier) {
-        Text(
-            text = value,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = FitCoachColors.Accent
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = FitCoachColors.TextMuted
-        )
+        Text(value, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = FitCoachColors.Accent)
+        Text(label, fontSize = 12.sp, color = FitCoachColors.TextMuted)
     }
+}
+
+private fun weeksWord(n: Int): String = when {
+    n % 10 == 1 && n % 100 != 11 -> "неделя"
+    n % 10 in 2..4 && n % 100 !in 12..14 -> "недели"
+    else -> "недель"
 }

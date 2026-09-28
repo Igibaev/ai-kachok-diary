@@ -211,3 +211,102 @@ fun SetButton(
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Дополнения (агент «Программы»): кнопки, чипы выбора, кольцо прогресса без текста.
+// ---------------------------------------------------------------------------------------------
+
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    containerColor: Color = FitCoachColors.Accent,
+    contentColor: Color = FitCoachColors.AccentOn
+) {
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth().height(56.dp),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = FitCoachColors.Border,
+            disabledContentColor = FitCoachColors.TextMuted
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+    }
+}
+
+/** Чип одиночного/множественного выбора в фирменном стиле. */
+@Composable
+fun SelectableChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leading: String? = null
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) FitCoachColors.AccentSoft else FitCoachColors.Card)
+            .border(1.dp, if (selected) FitCoachColors.Accent else FitCoachColors.Border, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (leading != null) Text(leading, fontSize = 18.sp)
+        Text(
+            text,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) FitCoachColors.Accent else FitCoachColors.TextPrimary
+        )
+    }
+}
+
+/** Небольшой информационный чип (стрик, неделя и т.п.). */
+@Composable
+fun InfoChip(emoji: String, text: String, modifier: Modifier = Modifier, color: Color = FitCoachColors.TextPrimary) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(FitCoachColors.Card)
+            .border(1.dp, FitCoachColors.Border, RoundedCornerShape(20.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(emoji, fontSize = 14.sp)
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+@Composable
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = FitCoachColors.TextMuted, modifier = modifier)
+}
+
+/** Кольцо прогресса без текста внутри — контент рисуется поверх. */
+@Composable
+fun RingProgress(
+    value: Float,
+    max: Float,
+    color: Color,
+    size: Dp = 160.dp,
+    strokeWidth: Dp = 12.dp
+) {
+    val progress = (value / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
+    Canvas(modifier = Modifier.size(size)) {
+        val sw = strokeWidth.toPx()
+        val topLeft = Offset(sw / 2, sw / 2)
+        val arcSize = Size(this.size.width - sw, this.size.height - sw)
+        drawArc(FitCoachColors.Border, -90f, 360f, false, topLeft, arcSize, style = Stroke(sw, cap = StrokeCap.Round))
+        drawArc(color, -90f, 360f * progress, false, topLeft, arcSize, style = Stroke(sw, cap = StrokeCap.Round))
+    }
+}
