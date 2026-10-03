@@ -24,4 +24,14 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object QrPass : Screen("qr_pass")
     object Programs : Screen("programs")
+
+    // AI-повар
+    object MealPlan : Screen("meal_plan")
+    object ShoppingList : Screen("shopping_list")
+    object FoodPhoto : Screen("food_photo")
+
+    companion object {
+        /** Маршруты, на которые можно перейти из уведомления (extra `nav_route`); остальное игнорируется. */
+        val deepLinkable: Set<String> = setOf(ShoppingList.route, MealPlan.route, Nutrition.route, Water.route, Chat.route)
+    }
 }
