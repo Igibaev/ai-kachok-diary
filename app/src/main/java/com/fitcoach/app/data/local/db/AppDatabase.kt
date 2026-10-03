@@ -19,9 +19,11 @@ import kotlinx.coroutines.launch
         WaterEntryEntity::class,
         ChatMessageEntity::class,
         UserProfileEntity::class,
-        BodyMeasurementEntity::class
+        BodyMeasurementEntity::class,
+        MealPlanEntity::class,
+        ShoppingItemEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun userProfileDao(): UserProfileDao
     abstract fun bodyMeasurementDao(): BodyMeasurementDao
+    abstract fun mealPlanDao(): MealPlanDao
 }
 
 /**

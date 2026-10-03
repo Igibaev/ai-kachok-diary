@@ -31,6 +31,9 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds @Singleton
+    abstract fun bindMealPlanRepository(impl: MealPlanRepositoryImpl): MealPlanRepository
 }
 
 /** Реальные сервисы «Клуб»: карточки для Stories и демо-данные для презентаций. */

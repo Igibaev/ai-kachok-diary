@@ -190,6 +190,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons)
     implementation(libs.androidx.splashscreen)
+    // EXIF-поворот фото еды перед отправкой AI-повару
+    implementation(libs.androidx.exifinterface)
 
     // Hilt
     implementation(libs.hilt.android)

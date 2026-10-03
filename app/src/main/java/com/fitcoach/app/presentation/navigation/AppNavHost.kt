@@ -8,6 +8,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.fitcoach.app.presentation.screens.chat.ChatScreen
+import com.fitcoach.app.presentation.screens.chef.FoodPhotoScreen
+import com.fitcoach.app.presentation.screens.chef.MealPlanScreen
+import com.fitcoach.app.presentation.screens.chef.ShoppingListScreen
 import com.fitcoach.app.presentation.screens.club.ClubScreen
 import com.fitcoach.app.presentation.screens.club.QrPassScreen
 import com.fitcoach.app.presentation.screens.dashboard.DashboardScreen
@@ -107,8 +110,34 @@ fun AppNavHost(
         composable(Screen.Nutrition.route) {
             NutritionScreen(
                 onAddFood = { mealType -> navController.navigate(Screen.AddFood.createRoute(mealType)) },
-                onOpenWater = { navController.navigate(Screen.Water.route) }
+                onOpenWater = { navController.navigate(Screen.Water.route) },
+                onOpenFoodPhoto = { navController.navigate(Screen.FoodPhoto.route) },
+                onOpenMealPlan = { navController.navigate(Screen.MealPlan.route) },
+                onOpenShoppingList = { navController.navigate(Screen.ShoppingList.route) }
             )
+        }
+
+        composable(Screen.MealPlan.route) {
+            MealPlanScreen(
+                onBack = { navController.popBackStack() },
+                onOpenShoppingList = { navController.navigate(Screen.ShoppingList.route) { launchSingleTop = true } }
+            )
+        }
+
+        composable(Screen.ShoppingList.route) {
+            ShoppingListScreen(
+                onBack = { navController.popBackStack() },
+                onOpenMealPlan = {
+                    // Из списка к плану: если план уже в стеке — возвращаемся, иначе открываем.
+                    if (!navController.popBackStack(Screen.MealPlan.route, inclusive = false)) {
+                        navController.navigate(Screen.MealPlan.route) { launchSingleTop = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.FoodPhoto.route) {
+            FoodPhotoScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

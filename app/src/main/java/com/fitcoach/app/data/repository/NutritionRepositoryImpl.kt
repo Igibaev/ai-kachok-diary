@@ -58,10 +58,10 @@ class NutritionRepositoryImpl @Inject constructor(
 private fun NutritionEntryEntity.toDomain() = NutritionEntry(
     id = id, date = date,
     mealType = try { MealType.valueOf(mealType) } catch (e: Exception) { MealType.SNACK },
-    name = name, calories = calories, proteinG = proteinG, carbsG = carbsG, fatG = fatG, grams = grams
+    name = name, calories = calories, proteinG = proteinG, carbsG = carbsG, fatG = fatG, grams = grams, source = source
 )
 
 private fun NutritionEntry.toEntity() = NutritionEntryEntity(
     id = id, date = date, mealType = mealType.name, name = name,
-    calories = calories, proteinG = proteinG, carbsG = carbsG, fatG = fatG, grams = grams
+    calories = calories, proteinG = proteinG, carbsG = carbsG, fatG = fatG, grams = grams, source = source
 )

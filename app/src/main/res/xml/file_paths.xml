@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="share" path="share/" />
+    <!-- Снимки еды для AI-повара (TakePicture через FileProvider, без разрешения CAMERA); удаляются после анализа -->
+    <cache-path name="photos" path="photos/" />
 </paths>

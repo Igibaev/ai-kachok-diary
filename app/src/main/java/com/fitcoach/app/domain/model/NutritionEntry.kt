@@ -9,8 +9,16 @@ data class NutritionEntry(
     val proteinG: Float,
     val carbsG: Float,
     val fatG: Float,
-    val grams: Float?
-)
+    val grams: Float?,
+    /** Откуда запись: "manual" | "photo" (AI-разбор фото) | "plan" (из плана питания). */
+    val source: String = SOURCE_MANUAL
+) {
+    companion object {
+        const val SOURCE_MANUAL = "manual"
+        const val SOURCE_PHOTO = "photo"
+        const val SOURCE_PLAN = "plan"
+    }
+}
 
 enum class MealType(val displayName: String) {
     BREAKFAST("Завтрак"),

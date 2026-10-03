@@ -36,6 +36,8 @@ import com.fitcoach.app.presentation.navigation.AppNavHost
 import com.fitcoach.app.presentation.navigation.Screen
 import com.fitcoach.app.presentation.theme.FitCoachColors
 import com.fitcoach.app.presentation.theme.FitCoachTheme
+import com.fitcoach.app.workers.Notifications
+import android.content.Intent
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,10 +51,14 @@ class MainActivity : AppCompatActivity() {
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* результат не критичен */ }
 
+    /** Маршрут из уведомления (extra `nav_route`); обрабатывается один раз после старта графа навигации. */
+    private var pendingRoute by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) pendingRoute = routeFrom(intent)
 
         var startDestination: String? by mutableStateOf(null)
         splash.setKeepOnScreenCondition { startDestination == null }
@@ -70,12 +76,22 @@ class MainActivity : AppCompatActivity() {
                 start?.let {
                     MainAppContent(
                         startDestination = it,
-                        onOnboardingFinished = { requestNotificationPermissionIfNeeded() }
+                        onOnboardingFinished = { requestNotificationPermissionIfNeeded() },
+                        pendingRoute = pendingRoute,
+                        onRouteConsumed = { pendingRoute = null }
                     )
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        routeFrom(intent)?.let { pendingRoute = it }
+    }
+
+    private fun routeFrom(intent: Intent?): String? =
+        intent?.getStringExtra(Notifications.EXTRA_ROUTE)?.takeIf { it in Screen.deepLinkable }
 
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -115,10 +131,23 @@ private val bottomNavItems = listOf(
 )
 
 @Composable
-private fun MainAppContent(startDestination: String, onOnboardingFinished: () -> Unit) {
+private fun MainAppContent(
+    startDestination: String,
+    onOnboardingFinished: () -> Unit,
+    pendingRoute: String? = null,
+    onRouteConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // Переход из уведомления — только когда пользователь уже на главной (онбординг не прерываем).
+    LaunchedEffect(pendingRoute, startDestination) {
+        val route = pendingRoute ?: return@LaunchedEffect
+        if (startDestination != Screen.Dashboard.route) return@LaunchedEffect
+        navController.navigate(route) { launchSingleTop = true }
+        onRouteConsumed()
+    }
 
     val showBottomBar = bottomNavItems.any { item ->
         currentDestination?.hierarchy?.any { it.route == item.screen.route } == true

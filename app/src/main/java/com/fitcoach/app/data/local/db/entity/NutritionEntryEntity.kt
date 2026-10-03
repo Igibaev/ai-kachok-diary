@@ -1,5 +1,6 @@
 package com.fitcoach.app.data.local.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
@@ -15,5 +16,6 @@ data class NutritionEntryEntity(
     val carbsG: Float,
     val fatG: Float,
     val grams: Float? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "manual") val source: String = "manual"
 )
