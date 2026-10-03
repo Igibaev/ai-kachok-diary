@@ -8,6 +8,8 @@ import { finalizePlan, sanitizeMealPlanRequest } from "../src/mealPlan.ts";
 import { decodedBase64Length, finalizeAnalysis, sanitizeFoodPhotoRequest } from "../src/foodPhoto.ts";
 import { FoodAnalysisSchema, MealPlanModelSchema } from "../src/schemas.ts";
 import { FEATURES } from "../src/index.ts";
+import Anthropic from "@anthropic-ai/sdk";
+import { mapUpstreamError, resolveDeviceId } from "../src/common.ts";
 
 const goals = { calories: 1850, proteinG: 140, carbsG: 190, fatG: 60 };
 
@@ -158,4 +160,29 @@ test("zodOutputFormat принимает схемы (JSON Schema без непо
   assert.ok(planSchema.includes('meat_fish'));
   assert.ok(!planSchema.includes('"minimum"'));
   assert.ok(JSON.stringify(photo.schema).includes('"isFood"'));
+});
+
+test("mapUpstreamError: ошибка разбора структурированного ответа (parse) → 502 bad_model_output, не 500", async () => {
+  const res = mapUpstreamError(new Anthropic.AnthropicError("Failed to parse structured output"), "ru", { ru: "AI-повар", kk: "AI-аспаз" }, { ru: "План неполный.", kk: "Жоспар толық емес." });
+  assert.equal(res.status, 502);
+  assert.deepEqual(await res.json(), { error: "bad_model_output", text: "План неполный." });
+  const generic = mapUpstreamError(new Error("boom"), "kk", { ru: "AI-повар", kk: "AI-аспаз" });
+  assert.equal(generic.status, 500);
+  assert.equal(((await generic.json()) as { error: string }).error, "internal");
+});
+
+test("resolveDeviceId: заголовок приоритетнее тела, некорректный deviceId тела → anonymous", () => {
+  const withHeader = new Request("https://x/v1/chat", { headers: { "x-device-id": "dev-1" } });
+  assert.equal(resolveDeviceId(withHeader, "bad id!"), "dev-1");
+  const noHeader = new Request("https://x/v1/chat");
+  assert.equal(resolveDeviceId(noHeader, "bad id!"), "anonymous");
+  assert.equal(resolveDeviceId(noHeader, "abc-123"), "abc-123");
+  assert.equal(resolveDeviceId(noHeader, undefined), "anonymous");
+});
+
+test("food-photo: base64 без паддинга принимается (паддинг достраивается), остаток 1 — ошибка", () => {
+  const ok = sanitizeFoodPhotoRequest({ imageBase64: "QUI", mediaType: "image/jpeg" });
+  assert.ok(typeof ok !== "string");
+  assert.equal(ok.imageBase64, "QUI=");
+  assert.equal(sanitizeFoodPhotoRequest({ imageBase64: "QUIAB", mediaType: "image/jpeg" }), "image_not_base64");
 });

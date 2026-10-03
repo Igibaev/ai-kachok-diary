@@ -19,6 +19,11 @@ const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 type MediaType = (typeof MEDIA_TYPES)[number];
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
+const SUBJECT = { ru: "AI-повар", kk: "AI-аспаз" };
+const GLOBAL_LIMIT_TEXT = { ru: "AI-повар сейчас отдыхает. Попробуй позже.", kk: "AI-аспаз қазір демалып жатыр. Кейінірек көріңіз." };
+/** 502 bad_model_output: ответ модели неполный или не прошёл схему. */
+const BAD_OUTPUT_TEXT = { ru: "Не удалось разобрать фото. Попробуй ещё раз.", kk: "Суретті талдау мүмкін болмады. Қайта көріңіз." };
+
 export interface FoodPhotoRequest {
   locale: Locale;
   imageBase64: string;
@@ -38,8 +43,11 @@ export function sanitizeFoodPhotoRequest(raw: unknown): FoodPhotoRequest | strin
   if (!raw || typeof raw !== "object") return "bad_body";
   const r = raw as Record<string, unknown>;
   if (typeof r.imageBase64 !== "string" || r.imageBase64.length === 0) return "image_required";
-  // Допускаем data-URI префикс и переводы строк от некоторых кодировщиков.
-  const data = r.imageBase64.replace(/^data:[^;]+;base64,/, "").replace(/\s+/g, "");
+  // Допускаем data-URI префикс, переводы строк и отсутствие паддинга (Base64.NO_PADDING на Android) —
+  // паддинг достраиваем сами; остаток 1 символ в base64 невозможен.
+  let data = r.imageBase64.replace(/^data:[^;]+;base64,/, "").replace(/\s+/g, "");
+  if (data.length % 4 === 1) return "image_not_base64";
+  if (data.length % 4 !== 0 && !data.endsWith("=")) data += "=".repeat(4 - (data.length % 4));
   if (!BASE64_RE.test(data) || data.length % 4 !== 0) return "image_not_base64";
   if (decodedBase64Length(data) > MAX_IMAGE_BYTES) return "image_too_large";
   if (!(MEDIA_TYPES as readonly unknown[]).includes(r.mediaType)) return "unsupported_image_type";
@@ -127,12 +135,12 @@ export async function handleFoodPhoto(request: Request, env: Env): Promise<Respo
       ru: "Лимит разборов фото на сегодня исчерпан. Продолжим завтра 📷",
       kk: "Бүгінгі фото талдау лимиті аяқталды. Ертең жалғастырамыз 📷",
     },
+    globalText: GLOBAL_LIMIT_TEXT,
   });
   if (limited) return limited;
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 1, timeout: 90_000 });
   const model = env.MODEL ?? DEFAULT_MODEL;
-  const subject = { ru: "AI-повар", kk: "AI-аспаз" };
 
   try {
     const response = await client.messages.parse({
@@ -155,17 +163,18 @@ export async function handleFoodPhoto(request: Request, env: Env): Promise<Respo
       return json(
         {
           error: "refused",
-          text: t(locale, "AI-повар не может разобрать это фото. Сфотографируй только еду на тарелке.", "AI-аспаз бұл суретті талдай алмайды. Тек тарелкадағы тағамды түсіріңіз."),
+          text: t(locale, "AI-повар не может разобрать это фото. Сфотографируй только еду на тарелке.", "AI-аспаз бұл суретті талдай алмайды. Тек тәрелкедегі тағамды түсіріңіз."),
         },
         422,
       );
     }
     if (response.stop_reason === "max_tokens" || !response.parsed_output) {
-      return json({ error: "bad_model_output", text: t(locale, "Не удалось разобрать фото. Попробуй ещё раз.", "Суретті талдау мүмкін болмады. Қайта көріңіз.") }, 502);
+      return json({ error: "bad_model_output", text: t(locale, BAD_OUTPUT_TEXT.ru, BAD_OUTPUT_TEXT.kk) }, 502);
     }
 
     return json({ analysis: finalizeAnalysis(response.parsed_output), model: response.model, usage: usageOf(response) });
   } catch (error) {
-    return mapUpstreamError(error, locale, subject);
+    // Обрезанный/невалидный JSON SDK бросает как AnthropicError ещё в parse → тоже bad_model_output.
+    return mapUpstreamError(error, locale, SUBJECT, BAD_OUTPUT_TEXT);
   }
 }

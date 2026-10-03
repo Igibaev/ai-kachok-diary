@@ -21,6 +21,14 @@ const CUISINES = ["kazakh", "home", "any"] as const;
 const BUDGETS = ["low", "mid", "any"] as const;
 const SEX = ["male", "female"] as const;
 
+const SUBJECT = { ru: "AI-повар", kk: "AI-аспаз" };
+const GLOBAL_LIMIT_TEXT = { ru: "AI-повар сейчас отдыхает. Попробуй позже.", kk: "AI-аспаз қазір демалып жатыр. Кейінірек көріңіз." };
+/** 502 bad_model_output: ответ модели неполный (обрезан по max_tokens) или не прошёл схему. */
+const BAD_OUTPUT_TEXT = {
+  ru: "План получился неполным. Попробуй меньше дней или приёмов пищи.",
+  kk: "Жоспар толық шықпады. Күн немесе тамақтану санын азайтып көріңіз.",
+};
+
 export interface MealPlanRequest {
   locale: Locale;
   days: (typeof DAYS)[number];
@@ -192,13 +200,13 @@ export async function handleMealPlan(request: Request, env: Env): Promise<Respon
       ru: "Лимит планов питания на сегодня исчерпан. Новый план можно составить завтра 🍽",
       kk: "Бүгінгі тамақтану жоспары лимиті аяқталды. Жаңа жоспарды ертең құруға болады 🍽",
     },
+    globalText: GLOBAL_LIMIT_TEXT,
   });
   if (limited) return limited;
 
   // Длинный структурированный ответ (7 дней × 5 приёмов) — таймаут SDK 180 с, без повторов (дорого).
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 0, timeout: 180_000 });
   const model = env.MODEL ?? DEFAULT_MODEL;
-  const subject = { ru: "AI-повар", kk: "AI-аспаз" };
 
   try {
     const response = await client.messages.parse({
@@ -219,13 +227,7 @@ export async function handleMealPlan(request: Request, env: Env): Promise<Respon
       );
     }
     if (response.stop_reason === "max_tokens" || !response.parsed_output) {
-      return json(
-        {
-          error: "bad_model_output",
-          text: t(locale, "План получился неполным. Попробуй меньше дней или приёмов пищи.", "Жоспар толық шықпады. Күн немесе тамақтану санын азайтып көріңіз."),
-        },
-        502,
-      );
+      return json({ error: "bad_model_output", text: t(locale, BAD_OUTPUT_TEXT.ru, BAD_OUTPUT_TEXT.kk) }, 502);
     }
 
     const plan = finalizePlan(response.parsed_output);
@@ -234,6 +236,7 @@ export async function handleMealPlan(request: Request, env: Env): Promise<Respon
     }
     return json({ plan, model: response.model, usage: usageOf(response) });
   } catch (error) {
-    return mapUpstreamError(error, locale, subject);
+    // Обрезанный по max_tokens JSON SDK бросает как AnthropicError ещё в parse → тоже bad_model_output.
+    return mapUpstreamError(error, locale, SUBJECT, BAD_OUTPUT_TEXT);
   }
 }

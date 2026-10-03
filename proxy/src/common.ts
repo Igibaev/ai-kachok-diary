@@ -87,8 +87,13 @@ export function guardRequest(request: Request, env: Env, maxBodyBytes: number): 
   return null;
 }
 
+/**
+ * Идентификатор устройства: заголовок X-Device-Id (уже проверен в guardRequest) → deviceId из тела → "anonymous".
+ * Некорректный deviceId в теле игнорируется (как в исходном /v1/chat), а не отклоняется.
+ */
 export function resolveDeviceId(request: Request, bodyDeviceId: string | undefined): string | null {
-  const deviceId = request.headers.get("x-device-id") ?? bodyDeviceId ?? "anonymous";
+  const fromBody = bodyDeviceId !== undefined && DEVICE_ID_RE.test(bodyDeviceId) ? bodyDeviceId : undefined;
+  const deviceId = request.headers.get("x-device-id") ?? fromBody ?? "anonymous";
   return DEVICE_ID_RE.test(deviceId) ? deviceId : null;
 }
 
@@ -98,6 +103,8 @@ export interface LimitSpec {
   perDevice: number;
   /** Текст 429 при исчерпании лимита устройства. */
   deviceText: { ru: string; kk: string };
+  /** Текст 429 при исчерпании общего лимита клуба (по умолчанию — текст AI-тренера). */
+  globalText?: { ru: string; kk: string };
 }
 
 /**
@@ -140,7 +147,11 @@ export async function applyLimits(
     return json(
       {
         error: "global_limit",
-        text: t(locale, "AI-тренер сейчас отдыхает. Попробуй позже.", "AI-жаттықтырушы қазір демалып жатыр. Кейінірек көріңіз."),
+        text: t(
+          locale,
+          spec.globalText?.ru ?? "AI-тренер сейчас отдыхает. Попробуй позже.",
+          spec.globalText?.kk ?? "AI-жаттықтырушы қазір демалып жатыр. Кейінірек көріңіз.",
+        ),
       },
       429,
     );
@@ -148,8 +159,17 @@ export async function applyLimits(
   return null;
 }
 
-/** Единый маппинг ошибок SDK в ответы `{error, text}` — тот же формат, что у /v1/chat. */
-export function mapUpstreamError(error: unknown, locale: Locale, subject: { ru: string; kk: string }): Response {
+/**
+ * Единый маппинг ошибок SDK в ответы `{error, text}` — тот же формат, что у /v1/chat.
+ * `badOutputText` — текст для 502 bad_model_output: `client.messages.parse` бросает AnthropicError
+ * («Failed to parse structured output»), если JSON модели обрезан по max_tokens или не прошёл схему.
+ */
+export function mapUpstreamError(
+  error: unknown,
+  locale: Locale,
+  subject: { ru: string; kk: string },
+  badOutputText?: { ru: string; kk: string },
+): Response {
   if (error instanceof Anthropic.AuthenticationError) {
     return json({ error: "upstream_auth", text: t(locale, `${subject.ru} временно недоступен (ключ).`, `${subject.kk} уақытша қолжетімсіз (кілт).`) }, 502);
   }
@@ -161,6 +181,20 @@ export function mapUpstreamError(error: unknown, locale: Locale, subject: { ru: 
   }
   if (error instanceof Anthropic.APIError) {
     return json({ error: "upstream_error", status: error.status, text: t(locale, `${subject.ru} временно недоступен.`, `${subject.kk} уақытша қолжетімсіз.`) }, 502);
+  }
+  if (error instanceof Anthropic.AnthropicError) {
+    // Не ошибка API: SDK не смог разобрать структурированный ответ (обрезан по max_tokens / не по схеме).
+    return json(
+      {
+        error: "bad_model_output",
+        text: t(
+          locale,
+          badOutputText?.ru ?? `${subject.ru} вернул неполный ответ. Попробуй ещё раз.`,
+          badOutputText?.kk ?? `${subject.kk} толық емес жауап қайтарды. Қайта көріңіз.`,
+        ),
+      },
+      502,
+    );
   }
   return json({ error: "internal", text: t(locale, "Внутренняя ошибка.", "Ішкі қате.") }, 500);
 }
