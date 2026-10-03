@@ -12,6 +12,10 @@ DAILY_LIMIT_PER_DEVICE = "40"
 DAILY_LIMIT_GLOBAL = "5000"
 # Лимит с одного IP в сутки (X-Device-Id присылает клиент, IP подделать сложнее).
 DAILY_LIMIT_PER_IP = "200"
+# AI-повар: планов питания и разборов фото еды на устройство в сутки (ключи KV rlp:/rlf:).
+# Общий счётчик DAILY_LIMIT_GLOBAL и лимит по IP — одни на чат, план и фото.
+DAILY_LIMIT_PLANS_PER_DEVICE = "3"
+DAILY_LIMIT_PHOTOS_PER_DEVICE = "20"
 
 # KV для счётчиков лимитов — ОБЯЗАТЕЛЬНЫЙ шаг. Создать: wrangler kv namespace create RATE_LIMIT_KV
 # и вставить полученный id ниже. Без KV прокси отвечает 503 rate_limit_not_configured

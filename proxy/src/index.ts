@@ -2,29 +2,26 @@
  * FitCoach AI — AI-прокси для white-label приложения.
  *
  * Зачем: ключ Anthropic хранится у фитнес-клуба (в секретах Cloudflare), а не в приложении.
- * Приложение шлёт историю диалога и системный промпт, прокси проверяет токен приложения,
- * лимиты на устройство и общий дневной лимит, вызывает Claude и возвращает текст ответа.
+ * Приложение шлёт запрос с токеном приложения, прокси проверяет токен, лимиты на устройство
+ * и общий дневной лимит, вызывает Claude и возвращает результат.
+ *
+ * Эндпоинты:
+ *   GET  /health          — состояние, модель, список фич
+ *   POST /v1/chat         — AI-тренер (текстовый диалог)
+ *   POST /v1/meal-plan    — AI-повар: план питания на 3/5/7 дней + список покупок (mealPlan.ts)
+ *   POST /v1/food-photo   — AI-повар: фото еды → блюда, граммы, КБЖУ (foodPhoto.ts)
  *
  * Деплой: см. README.md в этой папке (wrangler deploy, ~10 минут).
  */
 import Anthropic from "@anthropic-ai/sdk";
+import { applyLimits, DEFAULT_MODEL, guardRequest, json, mapUpstreamError, parsePositiveInt, resolveDeviceId, t, usageOf } from "./common.ts";
+import type { Env } from "./common.ts";
+import { handleFoodPhoto } from "./foodPhoto.ts";
+import { handleMealPlan } from "./mealPlan.ts";
 
-export interface Env {
-  ANTHROPIC_API_KEY: string;
-  /** Токен, который зашит в приложение (brands/<client>.properties → aiProxyToken). */
-  APP_TOKEN: string;
-  /** Модель по умолчанию. */
-  MODEL?: string;
-  /** Лимит запросов на одно устройство в сутки. */
-  DAILY_LIMIT_PER_DEVICE?: string;
-  /** Общий лимит запросов на всех в сутки (защита бюджета клуба). */
-  DAILY_LIMIT_GLOBAL?: string;
-  /** KV для счётчиков лимитов. ОБЯЗАТЕЛЕН: без привязки прокси отвечает 503 (fail-closed),
-   *  иначе извлекаемый из APK токен давал бы неограниченный расход ключа клуба. */
-  RATE_LIMIT_KV?: KVNamespace;
-  /** Лимит запросов с одного IP в сутки (защита от смены X-Device-Id клиентом). */
-  DAILY_LIMIT_PER_IP?: string;
-}
+export type { Env } from "./common.ts";
+
+export const FEATURES = ["chat", "meal-plan", "food-photo"] as const;
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -51,28 +48,6 @@ const MAX_MESSAGE_CHARS = 4000;
 const MAX_SYSTEM_CHARS = 12000;
 /** Тело запроса не больше 64 КБ: 30 сообщений × 4000 символов + промпт с запасом. */
 const MAX_BODY_BYTES = 64 * 1024;
-/** Идентификатор устройства — UUID/hex/base64url без экзотики; иначе ключ KV может превысить 512 байт. */
-const DEVICE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
-
-const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8", ...extra },
-  });
-
-const t = (locale: string | undefined, ru: string, kk: string) => (locale === "kk" ? kk : ru);
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-async function bumpCounter(kv: KVNamespace, key: string, limit: number): Promise<boolean> {
-  const current = Number((await kv.get(key)) ?? "0");
-  if (current >= limit) return false;
-  // TTL 2 суток — счётчик сам исчезнет.
-  await kv.put(key, String(current + 1), { expirationTtl: 60 * 60 * 48 });
-  return true;
-}
 
 function sanitize(req: ChatRequest): ChatRequest | string {
   if (!req || typeof req !== "object") return "bad_body";
@@ -89,8 +64,76 @@ function sanitize(req: ChatRequest): ChatRequest | string {
     system: req.system.slice(0, MAX_SYSTEM_CHARS),
     messages,
     locale: req.locale === "kk" ? "kk" : "ru",
-    deviceId: typeof req.deviceId === "string" && DEVICE_ID_RE.test(req.deviceId) ? req.deviceId : undefined,
+    deviceId: typeof req.deviceId === "string" ? req.deviceId : undefined,
   };
+}
+
+async function handleChat(request: Request, env: Env): Promise<Response> {
+  const guard = guardRequest(request, env, MAX_BODY_BYTES);
+  if (guard) return guard;
+  const kv = env.RATE_LIMIT_KV!;
+
+  let parsed: ChatRequest | string;
+  try {
+    parsed = sanitize((await request.json()) as ChatRequest);
+  } catch {
+    parsed = "bad_json";
+  }
+  if (typeof parsed === "string") return json({ error: parsed }, 400);
+  const body = parsed;
+  const locale = body.locale === "kk" ? "kk" : "ru";
+
+  const deviceId = resolveDeviceId(request, body.deviceId);
+  if (!deviceId) return json({ error: "bad_device_id" }, 400);
+
+  const limited = await applyLimits(request, env, kv, deviceId, locale, {
+    prefix: "rl",
+    perDevice: parsePositiveInt(env.DAILY_LIMIT_PER_DEVICE, 40),
+    deviceText: { ru: "Лимит вопросов на сегодня исчерпан. Продолжим завтра 💪", kk: "Бүгінгі сұрақ лимиті аяқталды. Ертең жалғастырамыз 💪" },
+  });
+  if (limited) return limited;
+
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 2, timeout: 60_000 });
+  const model = env.MODEL ?? DEFAULT_MODEL;
+
+  try {
+    const response = await client.beta.messages.create({
+      model,
+      max_tokens: 2048,
+      system: [{ type: "text", text: body.system, cache_control: { type: "ephemeral" } }],
+      messages: body.messages,
+      output_config: { effort: "low" },
+      // При отказе классификатора безопасности запрос автоматически уходит на рекомендованную модель.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+    });
+
+    if (response.stop_reason === "refusal") {
+      return json({
+        text: t(
+          locale,
+          "Я не могу ответить на этот вопрос. По медицинским вопросам обратись к врачу, а по тренировкам — к тренеру клуба.",
+          "Бұл сұраққа жауап бере алмаймын. Медициналық сұрақтар бойынша дәрігерге, жаттығу бойынша клуб жаттықтырушысына жүгініңіз.",
+        ),
+        model: response.model,
+      } satisfies ChatResponse);
+    }
+
+    const text = response.content
+      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("\n")
+      .trim();
+
+    const result: ChatResponse = {
+      text: text || t(locale, "Нет ответа. Попробуй переформулировать.", "Жауап жоқ. Басқаша сұрап көріңіз."),
+      model: response.model,
+      usage: usageOf(response),
+    };
+    return json(result);
+  } catch (error) {
+    return mapUpstreamError(error, locale, { ru: "AI-тренер", kk: "AI-жаттықтырушы" });
+  }
 }
 
 export default {
@@ -98,143 +141,21 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, model: env.MODEL ?? "claude-opus-5" });
+      return json({ ok: true, model: env.MODEL ?? DEFAULT_MODEL, features: FEATURES });
     }
 
-    if (request.method !== "POST" || url.pathname !== "/v1/chat") {
+    if (request.method !== "POST") {
       return json({ error: "not_found" }, 404);
     }
-
-    if (!env.APP_TOKEN || request.headers.get("x-app-token") !== env.APP_TOKEN) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
-    // Fail-closed: без KV лимиты не работают, а токен приложения извлекаем из APK —
-    // лучше отказать, чем сжечь бюджет клуба.
-    if (!env.RATE_LIMIT_KV) {
-      return json({ error: "rate_limit_not_configured" }, 503);
-    }
-
-    const contentType = request.headers.get("content-type") ?? "";
-    if (!contentType.toLowerCase().startsWith("application/json")) {
-      return json({ error: "unsupported_media_type" }, 415);
-    }
-    const contentLength = Number(request.headers.get("content-length") ?? "0");
-    if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_BODY_BYTES) {
-      return json({ error: "payload_too_large" }, 413);
-    }
-
-    const headerDeviceId = request.headers.get("x-device-id");
-    if (headerDeviceId !== null && !DEVICE_ID_RE.test(headerDeviceId)) {
-      return json({ error: "bad_device_id" }, 400);
-    }
-
-    let parsed: ChatRequest | string;
-    try {
-      parsed = sanitize((await request.json()) as ChatRequest);
-    } catch {
-      parsed = "bad_json";
-    }
-    if (typeof parsed === "string") return json({ error: parsed }, 400);
-    const body = parsed;
-
-    const deviceId = headerDeviceId ?? body.deviceId ?? "anonymous";
-    if (!DEVICE_ID_RE.test(deviceId)) return json({ error: "bad_device_id" }, 400);
-
-    {
-      const perDevice = Number(env.DAILY_LIMIT_PER_DEVICE ?? "40");
-      const global = Number(env.DAILY_LIMIT_GLOBAL ?? "5000");
-      const day = todayKey();
-      let okDevice: boolean;
-      try {
-        okDevice = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:${deviceId}`, perDevice);
-        // Лимит по IP: deviceId контролируется клиентом и его можно менять на каждый запрос.
-        const ip = request.headers.get("cf-connecting-ip");
-        if (ip && okDevice) {
-          const perIp = Number(env.DAILY_LIMIT_PER_IP ?? String(perDevice * 5));
-          okDevice = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:ip:${ip}`, perIp);
-        }
-      } catch {
-        return json({ error: "rate_limit_unavailable" }, 503);
-      }
-      if (!okDevice) {
-        return json(
-          {
-            error: "device_limit",
-            text: t(body.locale, "Лимит вопросов на сегодня исчерпан. Продолжим завтра 💪", "Бүгінгі сұрақ лимиті аяқталды. Ертең жалғастырамыз 💪"),
-          },
-          429,
-        );
-      }
-      let okGlobal: boolean;
-      try {
-        okGlobal = await bumpCounter(env.RATE_LIMIT_KV, `rl:${day}:__global__`, global);
-      } catch {
-        return json({ error: "rate_limit_unavailable" }, 503);
-      }
-      if (!okGlobal) {
-        return json(
-          {
-            error: "global_limit",
-            text: t(body.locale, "AI-тренер сейчас отдыхает. Попробуй позже.", "AI-жаттықтырушы қазір демалып жатыр. Кейінірек көріңіз."),
-          },
-          429,
-        );
-      }
-    }
-
-    const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 2, timeout: 60_000 });
-    const model = env.MODEL ?? "claude-opus-5";
-
-    try {
-      const response = await client.beta.messages.create({
-        model,
-        max_tokens: 2048,
-        system: [{ type: "text", text: body.system, cache_control: { type: "ephemeral" } }],
-        messages: body.messages,
-        output_config: { effort: "low" },
-        // При отказе классификатора безопасности запрос автоматически уходит на рекомендованную модель.
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-      });
-
-      if (response.stop_reason === "refusal") {
-        return json({
-          text: t(
-            body.locale,
-            "Я не могу ответить на этот вопрос. По медицинским вопросам обратись к врачу, а по тренировкам — к тренеру клуба.",
-            "Бұл сұраққа жауап бере алмаймын. Медициналық сұрақтар бойынша дәрігерге, жаттығу бойынша клуб жаттықтырушысына жүгініңіз.",
-          ),
-          model: response.model,
-        } satisfies ChatResponse);
-      }
-
-      const text = response.content
-        .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
-
-      const result: ChatResponse = {
-        text: text || t(body.locale, "Нет ответа. Попробуй переформулировать.", "Жауап жоқ. Басқаша сұрап көріңіз."),
-        model: response.model,
-        usage: { input_tokens: response.usage.input_tokens, output_tokens: response.usage.output_tokens },
-      };
-      return json(result);
-    } catch (error) {
-      if (error instanceof Anthropic.AuthenticationError) {
-        return json({ error: "upstream_auth", text: t(body.locale, "AI-тренер временно недоступен (ключ).", "AI-жаттықтырушы уақытша қолжетімсіз (кілт).") }, 502);
-      }
-      if (error instanceof Anthropic.RateLimitError) {
-        return json({ error: "upstream_rate_limit", text: t(body.locale, "Слишком много запросов. Попробуй через минуту.", "Сұраныс тым көп. Бір минуттан кейін көріңіз.") }, 429);
-      }
-      if (error instanceof Anthropic.APIConnectionError) {
-        return json({ error: "upstream_connection", text: t(body.locale, "Нет связи с AI. Проверь интернет.", "AI-мен байланыс жоқ. Интернетті тексеріңіз.") }, 504);
-      }
-      if (error instanceof Anthropic.APIError) {
-        return json({ error: "upstream_error", status: error.status, text: t(body.locale, "AI-тренер временно недоступен.", "AI-жаттықтырушы уақытша қолжетімсіз.") }, 502);
-      }
-      return json({ error: "internal", text: t(body.locale, "Внутренняя ошибка.", "Ішкі қате.") }, 500);
+    switch (url.pathname) {
+      case "/v1/chat":
+        return handleChat(request, env);
+      case "/v1/meal-plan":
+        return handleMealPlan(request, env);
+      case "/v1/food-photo":
+        return handleFoodPhoto(request, env);
+      default:
+        return json({ error: "not_found" }, 404);
     }
   },
 };
