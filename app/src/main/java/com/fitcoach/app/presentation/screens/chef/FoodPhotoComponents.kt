@@ -54,7 +54,7 @@ fun FoodAnalysisResult(
     onRetake: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (!analysis.isFood) {
+        if (!analysis.isFood || items.isEmpty()) {
             FitCard {
                 Text("🤔 " + stringResource(R.string.foodphoto_not_food_title), fontWeight = FontWeight.SemiBold, color = FitCoachColors.Warning)
                 Spacer(Modifier.height(6.dp))

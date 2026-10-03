@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,7 @@ import com.fitcoach.app.domain.model.FoodAnalysis
 import com.fitcoach.app.presentation.components.FitCard
 import com.fitcoach.app.presentation.components.PrimaryButton
 import com.fitcoach.app.presentation.theme.FitCoachColors
+import java.nio.ByteBuffer
 
 /**
  * Фото еды → КБЖУ. Камера — TakePicture в cacheDir/photos через FileProvider (разрешение CAMERA не нужно),
@@ -61,7 +63,8 @@ fun FoodPhotoScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    // rememberSaveable: пока открыта камера, Activity может быть пересоздана (поворот, нехватка памяти) — Uri снимка не теряем.
+    var cameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         cameraUri?.let { viewModel.onCameraResult(ok, it) }
@@ -95,7 +98,8 @@ fun FoodPhotoScreen(
 
             if (state.hasImage) {
                 AsyncImage(
-                    model = state.imageBytes ?: state.imageUri,
+                    // Coil 2.x не умеет ByteArray напрямую — оборачиваем в ByteBuffer (ByteBufferFetcher).
+                    model = remember(state.imageBytes, state.imageUri) { state.imageBytes?.let { ByteBuffer.wrap(it) } ?: state.imageUri },
                     contentDescription = stringResource(R.string.foodphoto_preview),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(FitCoachColors.Card)
@@ -127,7 +131,7 @@ fun FoodPhotoScreen(
                         ChefErrorCard(
                             title = stringResource(R.string.foodphoto_error_title),
                             message = message,
-                            onRetry = { viewModel.clearError(); if (state.imageUri != null) viewModel.analyze() else viewModel.reset() },
+                            onRetry = { viewModel.clearError(); if (state.hasImage) viewModel.analyze() else viewModel.reset() },
                             onDismiss = { viewModel.clearError() }
                         )
                     }

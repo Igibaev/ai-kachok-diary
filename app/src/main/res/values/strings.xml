@@ -548,8 +548,18 @@
     <string name="day_short_sun">Вс</string>
     <string name="notification_channel_shopping">Напоминания о покупках</string>
     <string name="notif_shopping_title">Пора за покупками 🛒</string>
-    <string name="notif_shopping_text">Список покупок: осталось %1$d позиций</string>
-    <string name="notif_shopping_pre_text">Завтра день покупок: в списке осталось %1$d позиций</string>
+    <plurals name="plural_notif_shopping">
+        <item quantity="one">Список покупок: осталась %d позиция</item>
+        <item quantity="few">Список покупок: осталось %d позиции</item>
+        <item quantity="many">Список покупок: осталось %d позиций</item>
+        <item quantity="other">Список покупок: осталось %d позиций</item>
+    </plurals>
+    <plurals name="plural_notif_shopping_pre">
+        <item quantity="one">Завтра день покупок: в списке осталась %d позиция</item>
+        <item quantity="few">Завтра день покупок: в списке осталось %d позиции</item>
+        <item quantity="many">Завтра день покупок: в списке осталось %d позиций</item>
+        <item quantity="other">Завтра день покупок: в списке осталось %d позиций</item>
+    </plurals>
 
     <!-- ===== Фото еды ===== -->
     <string name="foodphoto_title">Фото еды</string>

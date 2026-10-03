@@ -510,7 +510,7 @@
     <string name="shopping_empty_title">Тізім әзірге жоқ</string>
     <string name="shopping_empty_text">Сатып алу тізімі тамақтану жоспарынан жиналады: дүкен бөлімдері бойынша, қайталанусыз.</string>
     <string name="shopping_open_plan">Тамақтану жоспарына</string>
-    <string name="shopping_progress">%2$d-дан %1$d сатып алынды</string>
+    <string name="shopping_progress">Сатып алынды: %1$d / %2$d</string>
     <string name="shopping_share">Бөлісу</string>
     <string name="shopping_share_chooser">Сатып алу тізімін жіберу</string>
     <string name="shopping_uncheck_all">Барлық белгіні алу</string>
@@ -540,8 +540,14 @@
     <string name="day_short_sun">Жс</string>
     <string name="notification_channel_shopping">Сатып алу ескертпелері</string>
     <string name="notif_shopping_title">Сатып алуға уақыт келді 🛒</string>
-    <string name="notif_shopping_text">Сатып алу тізімі: %1$d позиция қалды</string>
-    <string name="notif_shopping_pre_text">Ертең — сатып алу күні: тізімде %1$d позиция қалды</string>
+    <plurals name="plural_notif_shopping">
+        <item quantity="one">Сатып алу тізімі: %d позиция қалды</item>
+        <item quantity="other">Сатып алу тізімі: %d позиция қалды</item>
+    </plurals>
+    <plurals name="plural_notif_shopping_pre">
+        <item quantity="one">Ертең — сатып алу күні: тізімде %d позиция қалды</item>
+        <item quantity="other">Ертең — сатып алу күні: тізімде %d позиция қалды</item>
+    </plurals>
 
     <!-- ===== Тағам фотосы ===== -->
     <string name="foodphoto_title">Тағам фотосы</string>

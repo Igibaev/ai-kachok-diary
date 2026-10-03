@@ -99,26 +99,32 @@ class FoodPhotoViewModel @Inject constructor(
     }
 
     fun onCameraResult(success: Boolean, uri: Uri) {
+        // После смерти процесса cameraFile потерян — восстанавливаем по Uri, чтобы файл всё равно удалился после анализа.
+        if (cameraFile == null) cameraFile = uri.lastPathSegment?.takeIf { it.startsWith("food_") }?.let { File(File(context.cacheDir, "photos"), it) }
         if (success) setImage(uri) else deleteCameraFile()
     }
 
     fun setImage(uri: Uri?) {
         if (uri == null) return
-        if (cameraFile != null && uri.toString().endsWith(cameraFile!!.name).not()) deleteCameraFile()
+        val current = cameraFile
+        if (current != null && uri.lastPathSegment != current.name) deleteCameraFile()
         _state.update { it.copy(imageUri = uri, imageBytes = null, analysis = null, items = emptyList(), error = null) }
     }
 
     fun setHint(value: String) = _state.update { it.copy(hint = value.take(120)) }
 
+    /** Анализ по Uri снимка или (повтор после ошибки, когда файл уже удалён) по уменьшенным байтам в памяти. */
     fun analyze() {
-        val uri = _state.value.imageUri ?: return
+        val uri = _state.value.imageUri
+        val cached = _state.value.imageBytes
+        if (uri == null && cached == null) return
         if (_state.value.analyzing) return
         _state.update { it.copy(analyzing = true, error = null) }
         viewModelScope.launch {
             var locale = BrandConfig.defaultLanguage
             try {
                 locale = userRepo.getProfile()?.language?.ifBlank { null } ?: BrandConfig.defaultLanguage
-                val bytes = ImageDownscaler.downscale(context, uri)
+                val bytes = if (uri != null) ImageDownscaler.downscale(context, uri) else cached
                 if (bytes == null) {
                     _state.update { it.copy(analyzing = false, error = ChefErrors.imageFailed(locale)) }
                     return@launch

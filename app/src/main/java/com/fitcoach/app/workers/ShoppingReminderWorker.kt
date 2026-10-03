@@ -48,8 +48,8 @@ class ShoppingReminderWorker @AssistedInject constructor(
         if (!onTime) return Result.success()
 
         val res = context.withLanguage(runCatching { userRepo.getProfile()?.language }.getOrNull() ?: "")
-        val text = if (kind == ShoppingReminderScheduler.KIND_PRE) res.getString(R.string.notif_shopping_pre_text, remaining)
-        else res.getString(R.string.notif_shopping_text, remaining)
+        val text = if (kind == ShoppingReminderScheduler.KIND_PRE) res.resources.getQuantityString(R.plurals.plural_notif_shopping_pre, remaining, remaining)
+        else res.resources.getQuantityString(R.plurals.plural_notif_shopping, remaining, remaining)
         Notifications.show(
             context, Notifications.CHANNEL_SHOPPING, ID,
             res.getString(R.string.notif_shopping_title), text,
