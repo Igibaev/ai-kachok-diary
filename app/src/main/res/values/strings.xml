@@ -107,7 +107,7 @@
     <string name="onboarding_result_consult_button">Написать тренеру в WhatsApp</string>
     <string name="onboarding_result_important">Важно</string>
     <string name="onboarding_result_disclaimer">Приложение не заменяет врача. Рекомендации по тренировкам и питанию носят общий характер. При хронических заболеваниях, беременности, болях или травмах проконсультируйтесь с врачом и тренером клуба перед началом занятий.</string>
-    <string name="onboarding_result_consent">Согласен на обработку данных о здоровье (вес, ограничения, самочувствие) для персонализации программы. Данные хранятся на устройстве; при использовании AI-чата обезличенный контекст (пол, возраст, вес, цели, ограничения) и текст сообщений передаются на сервер клуба и в Anthropic.</string>
+    <string name="onboarding_result_consent">Согласен на обработку данных о здоровье (вес, ограничения, самочувствие) для персонализации программы. Данные хранятся на устройстве; при использовании AI-чата обезличенный контекст (пол, возраст, вес, цели, ограничения) и текст сообщений передаются на сервер клуба и в Anthropic. Фото еды для подсчёта КБЖУ отправляется туда же для оценки и не сохраняется.</string>
     <string name="onboarding_consent_hint">Чтобы продолжить, поставь галочку согласия выше</string>
     <string name="privacy_policy_link">Политика конфиденциальности</string>
     <string name="onboarding_age_range">Возраст от 14 до 90 лет</string>
@@ -392,14 +392,14 @@
     <string name="settings_demo_data">Демо-данные</string>
     <string name="settings_demo_hint">Для презентации: 3 недели тренировок, воды, питания и замеров. Текущие записи дневника будут удалены, профиль не меняется.</string>
     <string name="settings_demo_title">Заменить историю демо-данными?</string>
-    <string name="settings_demo_text">Текущие тренировки, вода, питание и замеры будут удалены и заменены демо-данными за 3 недели. Профиль останется.</string>
+    <string name="settings_demo_text">Текущие тренировки, вода, питание и замеры будут удалены и заменены демо-данными за 3 недели (плюс демо-план питания и список покупок). Профиль останется.</string>
     <string name="settings_demo_confirm">Заменить</string>
     <string name="settings_demo_load">Загрузить 3 недели</string>
     <string name="settings_demo_clear">Очистить всё</string>
     <string name="settings_restart_onboarding">Пройти онбординг заново</string>
     <string name="settings_version">%1$s · версия %2$s · бренд %3$s</string>
     <string name="settings_clear_title">Очистить все данные?</string>
-    <string name="settings_clear_text">Тренировки, вода, питание, замеры и чат будут удалены. Профиль останется.</string>
+    <string name="settings_clear_text">Тренировки, вода, питание, замеры, чат, план питания и список покупок будут удалены. Профиль останется.</string>
     <string name="settings_clear_confirm">Очистить</string>
     <string name="settings_msg_recalculated">Цели пересчитаны — не забудь сохранить</string>
     <string name="settings_msg_saved">Сохранено</string>

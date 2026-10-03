@@ -1,5 +1,6 @@
 package com.fitcoach.app.demo
 
+import com.fitcoach.app.ai.chef.DemoAiChefClient
 import com.fitcoach.app.data.local.db.AppDatabase
 import com.fitcoach.app.data.local.db.dao.BodyMeasurementDao
 import com.fitcoach.app.data.local.db.dao.NutritionDao
@@ -8,6 +9,10 @@ import com.fitcoach.app.data.local.db.entity.BodyMeasurementEntity
 import com.fitcoach.app.data.local.db.entity.NutritionEntryEntity
 import com.fitcoach.app.data.local.db.entity.WaterEntryEntity
 import com.fitcoach.app.domain.model.ExerciseSet
+import com.fitcoach.app.domain.model.MealPlanPrefs
+import com.fitcoach.app.domain.model.MealPlanRequest
+import com.fitcoach.app.domain.model.PlanGoals
+import com.fitcoach.app.domain.repository.MealPlanRepository
 import com.fitcoach.app.domain.model.MealType
 import com.fitcoach.app.domain.model.Restriction
 import com.fitcoach.app.domain.model.Sex
@@ -43,7 +48,9 @@ class DemoDataSeederImpl @Inject constructor(
     private val chatRepo: ChatRepository,
     private val waterDao: WaterDao,
     private val nutritionDao: NutritionDao,
-    private val measurementDao: BodyMeasurementDao
+    private val measurementDao: BodyMeasurementDao,
+    private val mealPlanRepo: MealPlanRepository,
+    private val demoChef: DemoAiChefClient
 ) : DemoDataSeeder {
 
     private val zone: ZoneId get() = ZoneId.systemDefault()
@@ -60,11 +67,25 @@ class DemoDataSeederImpl @Inject constructor(
         seedWater(today, rnd)
         seedNutrition(today)
         seedMeasurements(profile, today)
+        seedMealPlan(profile)
     }
 
     override suspend fun clearAllUserData() = withContext(Dispatchers.IO) {
         clearHistory()
         chatRepo.clearAll()
+        mealPlanRepo.clearAll()
+    }
+
+    // ---------------- AI-повар: демо-план и список покупок ----------------
+
+    /** 3-дневный демо-план с казахской кухней из [DemoAiChefClient]; в списке покупок 5 позиций уже отмечены. */
+    private suspend fun seedMealPlan(profile: UserProfile) {
+        val locale = profile.language.ifBlank { "ru" }
+        val prefs = MealPlanPrefs()
+        val plan = demoChef.buildPlan(days = 3, mealsPerDay = 4, locale = locale)
+        val request = MealPlanRequest(days = 3, mealsPerDay = 4, goals = PlanGoals.from(profile), profile = profile, prefs = prefs)
+        mealPlanRepo.savePlan(plan, request, isDemo = true)
+        mealPlanRepo.getShoppingItems().take(5).forEach { mealPlanRepo.setChecked(it.id, true) }
     }
 
     /** Чистит всё, кроме профиля, шаблонов продуктов и чата. */
