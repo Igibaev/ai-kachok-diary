@@ -89,4 +89,5 @@ object AppModule {
     @Provides fun provideChatMessageDao(db: AppDatabase) = db.chatMessageDao()
     @Provides fun provideUserProfileDao(db: AppDatabase) = db.userProfileDao()
     @Provides fun provideBodyMeasurementDao(db: AppDatabase) = db.bodyMeasurementDao()
+    @Provides fun provideMealPlanDao(db: AppDatabase) = db.mealPlanDao()
 }

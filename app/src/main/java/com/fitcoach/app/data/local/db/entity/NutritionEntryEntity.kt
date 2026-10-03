@@ -15,5 +15,6 @@ data class NutritionEntryEntity(
     val carbsG: Float,
     val fatG: Float,
     val grams: Float? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val source: String = "manual"
 )
