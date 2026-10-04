@@ -33,7 +33,7 @@ cp brands/_template.properties.example brands/ironclub.properties
 | `aiProxyUrl` | Адрес Cloudflare Worker из папки `proxy/` (только `https://`) | |
 | `aiProxyToken` | Токен Worker — НЕ в git: переменная `AI_PROXY_TOKEN_<NAME>` или `brands/<name>.secrets.properties` | |
 | `privacyPolicyUrl` | Публичная ссылка на политику конфиденциальности (ссылка в онбординге и настройках; обязательна для Play) | |
-| `aiModel` | Модель Claude (по умолчанию `claude-opus-5`) | |
+| `aiModel` | Модель только для режима разработчика (debug-сборка, свой ключ Anthropic; по умолчанию `claude-opus-5`). Нейросеть для клиентов клуба выбирается на прокси — шаг 4 | |
 
 ## Шаг 2. Логотип и иконка (необязательно, но именно это даёт «вау»)
 
@@ -50,10 +50,21 @@ app/src/ironclub/res/drawable/ic_launcher_foreground.xml  # передний п�
 
 Скопируйте `app/src/main/assets/club/club.json` в `app/src/ironclub/assets/club/club.json` и заполните тренеров, расписание групповых, услуги, акции. Позже клуб сможет править это сам через Google Sheets — см. `docs/CLUB_CONTENT.md`.
 
-## Шаг 4. AI-прокси
+## Шаг 4. AI-прокси и выбор нейросети
 
-Один Worker на клиента (ключ Anthropic — у клуба или у вас, лимиты — в переменных). Инструкция: `proxy/README.md`. Полученные URL и токен → `aiProxyUrl` / `aiProxyToken`.
+Один Worker на клиента (ключ AI-провайдера — у клуба или у вас, лимиты — в переменных). Инструкция: `proxy/README.md`. Полученные URL и токен → `aiProxyUrl` / `aiProxyToken`.
 Тот же Worker обслуживает AI-повара (`/v1/meal-plan`, `/v1/food-photo`): лимиты планов и фото в день на устройство — `DAILY_LIMIT_PLANS_PER_DEVICE` (3) и `DAILY_LIMIT_PHOTOS_PER_DEVICE` (20) в `wrangler.toml`; для пакета «Старт» (без AI-повара) — 0.
+
+**Нейросеть выбирается одной переменной** в `wrangler.toml` `[vars]` — приложение об этом не знает и не пересобирается:
+
+| Хотим | `[vars]` | Секрет (`wrangler secret put …`) |
+|---|---|---|
+| Claude (по умолчанию) | `AI_PROVIDER = "anthropic"`, `AI_MODEL = "claude-sonnet-5"` (или `claude-opus-5`) | `ANTHROPIC_API_KEY` |
+| OpenAI | `AI_PROVIDER = "openai"`, `AI_MODEL = "<модель OpenAI>"` | `AI_API_KEY` |
+| Google Gemini | `AI_PROVIDER = "openai"`, `AI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"`, `AI_MODEL = "<модель Gemini>"` | `AI_API_KEY` |
+| DeepSeek, OpenRouter, Mistral, Groq, локальная Ollama/vLLM | `AI_PROVIDER = "openai"`, `AI_BASE_URL = "<OpenAI-совместимый URL>/v1"`, `AI_MODEL = "<модель>"` | `AI_API_KEY` |
+
+Повар может работать на другой модели, чем чат: задайте `CHEF_PROVIDER` / `CHEF_MODEL` / `CHEF_BASE_URL` и секрет `CHEF_API_KEY` (не заданы — наследуют `AI_*`). Например, чат на Claude, фото еды — на Gemini. Модель для повара должна понимать изображения и отдавать JSON; точность оценки по фото зависит от модели — проверьте на 5–10 своих снимках перед релизом. Имена моделей и цены берите из документации провайдера; примеры конфигураций по каждому провайдеру — `proxy/README.md`. Проверка: `curl …/health` → `providers.chat` и `providers.chef` показывают выбранные `id` / `model` (без ключей).
 
 ## Шаг 5. Сборка
 
@@ -78,3 +89,4 @@ APK: `app/build/outputs/apk/ironclub/…`. Все бренды сразу: `./gr
 
 - `applicationId` — **нельзя** (это идентификатор приложения в Google Play).
 - Всё остальное (цвета, контакты, логотип, прокси) — можно в любой момент, это новая версия (`versionName`, `versionCode` — см. `docs/RELEASE.md`).
+- Нейросеть (провайдер и модель) — меняется на прокси (`AI_*` / `CHEF_*`) в любой момент, без новой версии приложения.

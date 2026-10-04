@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.1 — любая нейросеть (2026-10-04)
+
+### Продукт
+- AI-слой прокси стал **провайдер-независимым**: чат AI-тренера и AI-повар работают на любой модели — Anthropic Claude (по умолчанию), OpenAI, Google Gemini, DeepSeek, OpenRouter, локальные модели через OpenAI-совместимый API (Ollama, vLLM). Выбор — одной переменной на прокси, без пересборки приложения; ключи по-прежнему только у клуба.
+- Повар может работать на другой модели, чем чат (например, чат на Claude, фото еды на Gemini). Требование к модели повара: понимает изображения и отдаёт JSON; точность оценки по фото зависит от модели.
+
+### Инженерия
+- Прокси: слой `src/providers/` — интерфейс `AiProvider` (`generateText`, `generateJson<T>` с zod-схемой), реализации `anthropic.ts` (`@anthropic-ai/sdk`, как раньше) и `openaiCompatible.ts` (`fetch` на `/chat/completions` без SDK: `response_format: json_schema` с откатом на `json_object` + схема в промпте, валидация `safeParse` и один повтор, изображение как `image_url` data-URL, `AbortController`). Единый `ProviderError` (`auth` / `rate_limit` / `refused` / `bad_output` / `timeout` / `connection` / `upstream`) → `mapUpstreamError`.
+- Переменные: `AI_PROVIDER` (`anthropic` | `openai`), `AI_MODEL`, `AI_BASE_URL`, `AI_EXTRA_HEADERS`, секрет `AI_API_KEY` (для Anthropic — по-прежнему `ANTHROPIC_API_KEY`); переопределения для повара `CHEF_PROVIDER` / `CHEF_MODEL` / `CHEF_BASE_URL` / `CHEF_API_KEY` / `CHEF_EXTRA_HEADERS`. Старая `MODEL` работает как `AI_MODEL`. Нет ключа для выбранного провайдера → `503 provider_not_configured`.
+- `/health` → `providers: {chat: {id, model}, chef: {id, model}}` без ключей и baseUrl. Промпты по смыслу не менялись; для JSON-режима без `json_schema` описание схемы генерируется из zod автоматически.
+- Тесты: `providers.test.ts` (выбор по переменным, `CHEF_*`, `MODEL`, отсутствующий ключ), `openaiCompatible.test.ts` на моке `fetch` (json_schema, откат на json_object, повтор → `bad_output`, маппинг ошибок, data-URL, доп. заголовки), `/health` без секретов.
+- Android: без изменений (`aiModel` в `brands/*.properties` — только для debug-режима «свой ключ»).
+
+### Документы
+- README («Любая нейросеть», технологии), ARCHITECTURE (слой `providers/`, переменные, схема «приложение → прокси → провайдер по выбору»), WHITE_LABEL (шаг 4: выбор модели одной переменной), прайс (вопрос «а если захотим другую нейросеть?», цифры себестоимости — для Claude как пример), возражение 9 «мы хотим GPT / Gemini / местную модель», конкуренты (завязка на одного вендора снята), лендинг (FAQ «Какая нейросеть внутри?»), PRIVACY_POLICY RU/KK (провайдер модели ИИ, выбранный Клубом — `{{AI_PROVIDER_NAME}}`), `proxy/README.md` (таблица провайдеров, «Повар на другой модели»), комментарии в `brands/*.properties` и `wrangler.toml`.
+
 ## 1.1.0 — AI-повар (2026-10-03)
 
 ### Продукт
