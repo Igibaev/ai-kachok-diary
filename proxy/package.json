@@ -8,7 +8,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "secrets": "echo 'wrangler secret put ANTHROPIC_API_KEY && wrangler secret put APP_TOKEN'",
+    "secrets": "echo 'wrangler secret put APP_TOKEN; затем ключ провайдера: wrangler secret put ANTHROPIC_API_KEY (anthropic) или wrangler secret put AI_API_KEY (openai); для повара на своей модели — wrangler secret put CHEF_API_KEY'",
     "test": "node --test test/*.test.ts"
   },
   "dependencies": {

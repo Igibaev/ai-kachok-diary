@@ -1,12 +1,11 @@
 /**
- * POST /v1/food-photo — фото еды → распознанные блюда с граммами и КБЖУ (Claude vision).
+ * POST /v1/food-photo — фото еды → распознанные блюда с граммами и КБЖУ (любая vision-модель через providers/).
  * Изображение приходит base64 (JPEG/PNG/WebP, ≤ 1,5 МБ после декодирования), ответ структурированный
- * (`client.messages.parse` + zod). Фото не сохраняется и не логируется.
+ * (`provider.generateJson` + zod). Фото не сохраняется и не логируется.
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { applyLimits, DEFAULT_MODEL, guardRequest, json, mapUpstreamError, normalizeLocale, parsePositiveInt, resolveDeviceId, t, usageOf } from "./common.ts";
+import { applyLimits, guardRequest, json, mapUpstreamError, normalizeLocale, parsePositiveInt, providerOrResponse, resolveDeviceId, t, usageOf } from "./common.ts";
 import type { Env, Locale } from "./common.ts";
+import { ProviderError } from "./providers/index.ts";
 import { FoodAnalysisSchema } from "./schemas.ts";
 import type { FoodAnalysis } from "./schemas.ts";
 
@@ -128,6 +127,9 @@ export async function handleFoodPhoto(request: Request, env: Env): Promise<Respo
   const deviceId = resolveDeviceId(request, body.deviceId);
   if (!deviceId) return json({ error: "bad_device_id" }, 400);
 
+  const provider = providerOrResponse(env, "chef", locale);
+  if (provider instanceof Response) return provider;
+
   const limited = await applyLimits(request, env, kv, deviceId, locale, {
     prefix: "rlf",
     perDevice: parsePositiveInt(env.DAILY_LIMIT_PHOTOS_PER_DEVICE, 20),
@@ -139,27 +141,21 @@ export async function handleFoodPhoto(request: Request, env: Env): Promise<Respo
   });
   if (limited) return limited;
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 1, timeout: 90_000 });
-  const model = env.MODEL ?? DEFAULT_MODEL;
-
   try {
-    const response = await client.messages.parse({
-      model,
-      max_tokens: 4096,
+    // Таймаут 90 с, один повтор при сетевой ошибке.
+    const result = await provider.generateJson({
       system: buildPhotoSystemPrompt(locale),
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: body.mediaType, data: body.imageBase64 } },
-            { type: "text", text: buildPhotoUserText(body) },
-          ],
-        },
-      ],
-      output_config: { effort: "low", format: zodOutputFormat(FoodAnalysisSchema) },
+      userText: buildPhotoUserText(body),
+      image: { mediaType: body.mediaType, base64: body.imageBase64 },
+      schema: FoodAnalysisSchema,
+      schemaName: "food_analysis",
+      maxTokens: 4096,
+      timeoutMs: 90_000,
+      maxRetries: 1,
     });
-
-    if (response.stop_reason === "refusal") {
+    return json({ analysis: finalizeAnalysis(result.value), model: result.model, usage: usageOf(result) });
+  } catch (error) {
+    if (error instanceof ProviderError && error.kind === "refused") {
       return json(
         {
           error: "refused",
@@ -168,13 +164,7 @@ export async function handleFoodPhoto(request: Request, env: Env): Promise<Respo
         422,
       );
     }
-    if (response.stop_reason === "max_tokens" || !response.parsed_output) {
-      return json({ error: "bad_model_output", text: t(locale, BAD_OUTPUT_TEXT.ru, BAD_OUTPUT_TEXT.kk) }, 502);
-    }
-
-    return json({ analysis: finalizeAnalysis(response.parsed_output), model: response.model, usage: usageOf(response) });
-  } catch (error) {
-    // Обрезанный/невалидный JSON SDK бросает как AnthropicError ещё в parse → тоже bad_model_output.
+    // Обрезанный/невалидный JSON провайдер отдаёт как bad_output → 502 bad_model_output.
     return mapUpstreamError(error, locale, SUBJECT, BAD_OUTPUT_TEXT);
   }
 }

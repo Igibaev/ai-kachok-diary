@@ -1,8 +1,10 @@
 /**
- * Zod-схемы структурированных ответов Claude (AI-повар).
- * Передаются в `client.messages.parse` через `output_config.format = zodOutputFormat(schema)`.
- * Без ограничений вида .min()/.max() — они не входят в поддерживаемое подмножество JSON Schema,
- * числа проверяются и нормализуются на сервере (см. shopping.ts / mealPlan.ts / foodPhoto.ts).
+ * Zod-схемы структурированных ответов модели (AI-повар). Провайдер-независимы:
+ *  - anthropic → `output_config.format = zodOutputFormat(schema)` (providers/anthropic.ts);
+ *  - openai-совместимые → JSON Schema через `z.toJSONSchema` + `response_format` + `safeParse` (providers/openaiCompatible.ts).
+ * Без ограничений вида .min()/.max() и без optional-полей: это нужно и для подмножества JSON Schema у Anthropic,
+ * и для strict-режима OpenAI (все поля в required, additionalProperties:false). Числа проверяются
+ * и нормализуются на сервере (см. shopping.ts / mealPlan.ts / foodPhoto.ts).
  */
 import { z } from "zod";
 
