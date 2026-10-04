@@ -3,11 +3,40 @@ main = "src/index.ts"
 compatibility_date = "2025-09-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Переменные без секретов. Секреты (ANTHROPIC_API_KEY, APP_TOKEN) задаются командой:
-#   wrangler secret put ANTHROPIC_API_KEY
-#   wrangler secret put APP_TOKEN
+# Переменные без секретов. Секреты задаются ТОЛЬКО командой `wrangler secret put <ИМЯ>` (в этот файл не писать):
+#   wrangler secret put APP_TOKEN            # токен приложения (всегда)
+#   wrangler secret put ANTHROPIC_API_KEY    # если провайдер anthropic (по умолчанию)
+#   wrangler secret put AI_API_KEY           # если AI_PROVIDER = "openai" (OpenAI / Gemini / DeepSeek / OpenRouter / Ollama…)
+#   wrangler secret put CHEF_API_KEY         # если у повара свой провайдер/ключ (CHEF_PROVIDER)
 [vars]
+# ---------- Какая нейросеть (подробно: README.md → «Какую нейросеть использовать») ----------
+# AI_PROVIDER — семейство API: "anthropic" (Claude через SDK, по умолчанию) или "openai"
+# (любой OpenAI-совместимый /chat/completions: OpenAI, Google Gemini, DeepSeek, Mistral, Groq, OpenRouter,
+# xAI, Together, локальные Ollama / vLLM / LM Studio). Модель должна уметь читать фото и отдавать JSON.
+# AI_PROVIDER = "anthropic"
+# AI_MODEL — модель. Примеры: "claude-opus-5", "claude-sonnet-5" (anthropic); "gpt-4o", "gpt-4.1-mini" (OpenAI);
+#   "gemini-2.5-flash" (Gemini); "google/gemini-2.5-flash" (OpenRouter); "llama3.2-vision" (Ollama).
+#   Старое имя MODEL продолжает работать, если AI_MODEL не задана.
+# AI_MODEL = "claude-opus-5"
 MODEL = "claude-opus-5"
+# AI_BASE_URL — только для openai. По умолчанию https://api.openai.com/v1. Примеры:
+#   Gemini      "https://generativelanguage.googleapis.com/v1beta/openai"
+#   DeepSeek    "https://api.deepseek.com/v1"
+#   OpenRouter  "https://openrouter.ai/api/v1"
+#   Ollama      "http://<хост>:11434/v1"  (локально, для тестов; ключ — любая строка)
+# AI_BASE_URL = "https://api.openai.com/v1"
+# AI_EXTRA_HEADERS — JSON с доп. заголовками (OpenRouter просит HTTP-Referer / X-Title):
+# AI_EXTRA_HEADERS = '{"HTTP-Referer":"https://fitcoach.kz","X-Title":"FitCoach AI"}'
+#
+# ---------- Повар на другой модели (/v1/meal-plan + /v1/food-photo) ----------
+# Если заданы — повар идёт через них, иначе наследует общие AI_*. Пример: чат на Claude, фото еды — на Gemini Flash:
+# CHEF_PROVIDER = "openai"
+# CHEF_MODEL = "gemini-2.5-flash"
+# CHEF_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+# CHEF_EXTRA_HEADERS = '{}'
+# и ключ: wrangler secret put CHEF_API_KEY
+#
+# ---------- Лимиты ----------
 DAILY_LIMIT_PER_DEVICE = "40"
 DAILY_LIMIT_GLOBAL = "5000"
 # Лимит с одного IP в сутки (X-Device-Id присылает клиент, IP подделать сложнее).
