@@ -1,5 +1,5 @@
 /**
- * Тесты валидации запросов и нормализации ответов AI-повара (без сети: Anthropic не вызывается).
+ * Тесты валидации запросов и нормализации ответов AI-повара (без сети: ни один провайдер не вызывается).
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -7,9 +7,12 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { finalizePlan, sanitizeMealPlanRequest } from "../src/mealPlan.ts";
 import { decodedBase64Length, finalizeAnalysis, sanitizeFoodPhotoRequest } from "../src/foodPhoto.ts";
 import { FoodAnalysisSchema, MealPlanModelSchema } from "../src/schemas.ts";
-import { FEATURES } from "../src/index.ts";
+import worker, { FEATURES } from "../src/index.ts";
 import Anthropic from "@anthropic-ai/sdk";
 import { mapUpstreamError, resolveDeviceId } from "../src/common.ts";
+import type { Env } from "../src/common.ts";
+import { ProviderError } from "../src/providers/index.ts";
+import { toProviderError } from "../src/providers/anthropic.ts";
 
 const goals = { calories: 1850, proteinG: 140, carbsG: 190, fatG: 60 };
 
@@ -162,13 +165,80 @@ test("zodOutputFormat принимает схемы (JSON Schema без непо
   assert.ok(JSON.stringify(photo.schema).includes('"isFood"'));
 });
 
-test("mapUpstreamError: ошибка разбора структурированного ответа (parse) → 502 bad_model_output, не 500", async () => {
-  const res = mapUpstreamError(new Anthropic.AnthropicError("Failed to parse structured output"), "ru", { ru: "AI-повар", kk: "AI-аспаз" }, { ru: "План неполный.", kk: "Жоспар толық емес." });
+test("mapUpstreamError: ProviderError по kind → код и статус; прочее → 500 internal", async () => {
+  const res = mapUpstreamError(new ProviderError("bad_output", "truncated"), "ru", { ru: "AI-повар", kk: "AI-аспаз" }, { ru: "План неполный.", kk: "Жоспар толық емес." });
   assert.equal(res.status, 502);
   assert.deepEqual(await res.json(), { error: "bad_model_output", text: "План неполный." });
+  const auth = mapUpstreamError(new ProviderError("auth", "401", 401), "ru", { ru: "AI-повар", kk: "AI-аспаз" });
+  assert.equal(auth.status, 502);
+  assert.equal(((await auth.json()) as { error: string }).error, "upstream_auth");
+  const rl = mapUpstreamError(new ProviderError("rate_limit", "429", 429), "ru", { ru: "AI-повар", kk: "AI-аспаз" });
+  assert.equal(rl.status, 429);
+  const timeout = mapUpstreamError(new ProviderError("timeout", "slow"), "kk", { ru: "AI-повар", kk: "AI-аспаз" });
+  assert.equal(timeout.status, 504);
+  assert.equal(((await timeout.json()) as { error: string }).error, "upstream_timeout");
+  const upstream = mapUpstreamError(new ProviderError("upstream", "boom", 503), "ru", { ru: "AI-повар", kk: "AI-аспаз" });
+  assert.equal(upstream.status, 502);
+  assert.equal(((await upstream.json()) as { status: number }).status, 503);
   const generic = mapUpstreamError(new Error("boom"), "kk", { ru: "AI-повар", kk: "AI-аспаз" });
   assert.equal(generic.status, 500);
   assert.equal(((await generic.json()) as { error: string }).error, "internal");
+});
+
+test("anthropic: ошибки SDK переводятся в ProviderError (parse-ошибка → bad_output, не internal)", () => {
+  assert.equal(toProviderError(new Anthropic.AnthropicError("Failed to parse structured output")).kind, "bad_output");
+  assert.equal(toProviderError(new Anthropic.APIConnectionTimeoutError()).kind, "timeout");
+  assert.equal(toProviderError(new Anthropic.APIConnectionError({ message: "ECONNRESET" })).kind, "connection");
+  const auth = toProviderError(new Anthropic.AuthenticationError(401, { error: { message: "bad key" } }, "bad key", new Headers()));
+  assert.equal(auth.kind, "auth");
+  assert.equal(auth.status, 401);
+  assert.equal(toProviderError(new Anthropic.RateLimitError(429, undefined, "slow down", new Headers())).kind, "rate_limit");
+  assert.equal(toProviderError(new Anthropic.InternalServerError(529, undefined, "overloaded", new Headers())).kind, "upstream");
+  assert.equal(toProviderError(new ProviderError("refused", "x")).kind, "refused");
+  assert.equal(toProviderError(new Error("weird")).kind, "upstream");
+});
+
+test("/health: провайдеры и модели без секретов и baseUrl", async () => {
+  const env = {
+    APP_TOKEN: "app-token-secret",
+    ANTHROPIC_API_KEY: "sk-ant-secret-key",
+    AI_MODEL: "claude-sonnet-5",
+    CHEF_PROVIDER: "openai",
+    CHEF_MODEL: "gemini-2.5-flash",
+    CHEF_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/openai",
+    CHEF_API_KEY: "gemini-secret-key",
+    CHEF_EXTRA_HEADERS: '{"X-Secret-Header":"hidden-value"}',
+  } as unknown as Env;
+  const res = await worker.fetch(new Request("https://proxy.test/health"), env);
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  for (const secret of ["sk-ant-secret-key", "gemini-secret-key", "app-token-secret", "hidden-value", "googleapis", "AI_API_KEY"]) {
+    assert.ok(!text.includes(secret), `health leaks ${secret}`);
+  }
+  const body = JSON.parse(text) as { ok: boolean; model: string; features: string[]; providers: Record<string, { id: string; model: string; configured: boolean }> };
+  assert.equal(body.ok, true);
+  assert.equal(body.model, "claude-sonnet-5");
+  assert.deepEqual(body.features, [...FEATURES]);
+  assert.deepEqual(body.providers.chat, { id: "anthropic", model: "claude-sonnet-5", configured: true });
+  assert.deepEqual(body.providers.chef, { id: "openai", model: "gemini-2.5-flash", configured: true });
+});
+
+test("/v1/chat без ключа провайдера → 503 provider_not_configured (до списания лимитов)", async () => {
+  let kvWrites = 0;
+  const kv = { get: async () => null, put: async () => { kvWrites++; } } as unknown as KVNamespace;
+  const env = { APP_TOKEN: "tok", RATE_LIMIT_KV: kv, AI_PROVIDER: "openai" } as unknown as Env;
+  const payload = JSON.stringify({ system: "s", messages: [{ role: "user", content: "hi" }] });
+  const res = await worker.fetch(
+    new Request("https://proxy.test/v1/chat", {
+      method: "POST",
+      headers: { "x-app-token": "tok", "content-type": "application/json", "content-length": String(payload.length) },
+      body: payload,
+    }),
+    env,
+  );
+  assert.equal(res.status, 503);
+  assert.equal(((await res.json()) as { error: string }).error, "provider_not_configured");
+  assert.equal(kvWrites, 0);
 });
 
 test("resolveDeviceId: заголовок приоритетнее тела, некорректный deviceId тела → anonymous", () => {

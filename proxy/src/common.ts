@@ -1,15 +1,15 @@
 /**
- * Общие помощники прокси: JSON-ответы, локализация ошибок, лимиты в KV, маппинг ошибок SDK.
- * Используются /v1/chat, /v1/meal-plan и /v1/food-photo.
+ * Общие помощники прокси: JSON-ответы, локализация ошибок, лимиты в KV, маппинг ошибок провайдера.
+ * Используются /v1/chat, /v1/meal-plan и /v1/food-photo. Про конкретную нейросеть здесь ничего не известно —
+ * только `ProviderError` из providers/.
  */
-import Anthropic from "@anthropic-ai/sdk";
+import { ProviderError, ProviderNotConfiguredError, resolveProvider } from "./providers/index.ts";
+import type { AiProvider, Feature, ProviderEnv, ProviderResult } from "./providers/index.ts";
 
-export interface Env {
-  ANTHROPIC_API_KEY: string;
+/** Переменные провайдера (ANTHROPIC_API_KEY, AI_*, CHEF_*, MODEL) описаны в providers/index.ts. */
+export interface Env extends ProviderEnv {
   /** Токен, который зашит в приложение (brands/<client>.properties → aiProxyToken). */
   APP_TOKEN: string;
-  /** Модель по умолчанию. */
-  MODEL?: string;
   /** Лимит запросов чата на одно устройство в сутки. */
   DAILY_LIMIT_PER_DEVICE?: string;
   /** Общий лимит запросов (чат + план + фото) на всех в сутки (защита бюджета клуба). */
@@ -26,8 +26,6 @@ export interface Env {
 }
 
 export type Locale = "ru" | "kk";
-
-export const DEFAULT_MODEL = "claude-opus-5";
 
 /** Идентификатор устройства — UUID/hex/base64url без экзотики; иначе ключ KV может превысить 512 байт. */
 export const DEVICE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -160,9 +158,29 @@ export async function applyLimits(
 }
 
 /**
- * Единый маппинг ошибок SDK в ответы `{error, text}` — тот же формат, что у /v1/chat.
- * `badOutputText` — текст для 502 bad_model_output: `client.messages.parse` бросает AnthropicError
- * («Failed to parse structured output»), если JSON модели обрезан по max_tokens или не прошёл схему.
+ * Провайдер для фичи или готовый ответ 503 provider_not_configured (нет ключа / некорректные AI_* или CHEF_*).
+ * Проверяется до списания лимитов, чтобы ошибка конфигурации не ела дневные квоты пользователей.
+ */
+export function providerOrResponse(env: Env, feature: Feature, locale: Locale): AiProvider | Response {
+  try {
+    return resolveProvider(env, feature);
+  } catch (error) {
+    const detail = error instanceof ProviderNotConfiguredError ? error.message : "provider";
+    console.error(`provider_not_configured (${feature}): ${detail}`);
+    return json(
+      {
+        error: "provider_not_configured",
+        text: t(locale, "AI временно не настроен. Обратись к администратору клуба.", "AI әлі бапталмаған. Клуб әкімшісіне хабарласыңыз."),
+      },
+      503,
+    );
+  }
+}
+
+/**
+ * Единый маппинг `ProviderError` в ответы `{error, text}` — формат общий для всех эндпоинтов.
+ * `badOutputText` — текст для 502 bad_model_output (ответ модели обрезан / не прошёл схему).
+ * `refused` сюда обычно не доходит — эндпоинты обрабатывают отказ сами (чат → 200 с текстом, повар → 422).
  */
 export function mapUpstreamError(
   error: unknown,
@@ -170,35 +188,39 @@ export function mapUpstreamError(
   subject: { ru: string; kk: string },
   badOutputText?: { ru: string; kk: string },
 ): Response {
-  if (error instanceof Anthropic.AuthenticationError) {
-    return json({ error: "upstream_auth", text: t(locale, `${subject.ru} временно недоступен (ключ).`, `${subject.kk} уақытша қолжетімсіз (кілт).`) }, 502);
+  if (error instanceof ProviderError) {
+    switch (error.kind) {
+      case "auth":
+        return json({ error: "upstream_auth", text: t(locale, `${subject.ru} временно недоступен (ключ).`, `${subject.kk} уақытша қолжетімсіз (кілт).`) }, 502);
+      case "rate_limit":
+        return json({ error: "upstream_rate_limit", text: t(locale, "Слишком много запросов. Попробуй через минуту.", "Сұраныс тым көп. Бір минуттан кейін көріңіз.") }, 429);
+      case "connection":
+        return json({ error: "upstream_connection", text: t(locale, "Нет связи с AI. Проверь интернет.", "AI-мен байланыс жоқ. Интернетті тексеріңіз.") }, 504);
+      case "timeout":
+        return json({ error: "upstream_timeout", text: t(locale, "AI не ответил вовремя. Попробуй ещё раз.", "AI уақытында жауап бермеді. Қайта көріңіз.") }, 504);
+      case "refused":
+        return json({ error: "refused", text: t(locale, `${subject.ru} не может ответить на этот запрос.`, `${subject.kk} бұл сұранысқа жауап бере алмайды.`) }, 422);
+      case "bad_output":
+        return json(
+          {
+            error: "bad_model_output",
+            text: t(
+              locale,
+              badOutputText?.ru ?? `${subject.ru} вернул неполный ответ. Попробуй ещё раз.`,
+              badOutputText?.kk ?? `${subject.kk} толық емес жауап қайтарды. Қайта көріңіз.`,
+            ),
+          },
+          502,
+        );
+      case "upstream":
+        return json({ error: "upstream_error", status: error.status, text: t(locale, `${subject.ru} временно недоступен.`, `${subject.kk} уақытша қолжетімсіз.`) }, 502);
+    }
   }
-  if (error instanceof Anthropic.RateLimitError) {
-    return json({ error: "upstream_rate_limit", text: t(locale, "Слишком много запросов. Попробуй через минуту.", "Сұраныс тым көп. Бір минуттан кейін көріңіз.") }, 429);
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return json({ error: "upstream_connection", text: t(locale, "Нет связи с AI. Проверь интернет.", "AI-мен байланыс жоқ. Интернетті тексеріңіз.") }, 504);
-  }
-  if (error instanceof Anthropic.APIError) {
-    return json({ error: "upstream_error", status: error.status, text: t(locale, `${subject.ru} временно недоступен.`, `${subject.kk} уақытша қолжетімсіз.`) }, 502);
-  }
-  if (error instanceof Anthropic.AnthropicError) {
-    // Не ошибка API: SDK не смог разобрать структурированный ответ (обрезан по max_tokens / не по схеме).
-    return json(
-      {
-        error: "bad_model_output",
-        text: t(
-          locale,
-          badOutputText?.ru ?? `${subject.ru} вернул неполный ответ. Попробуй ещё раз.`,
-          badOutputText?.kk ?? `${subject.kk} толық емес жауап қайтарды. Қайта көріңіз.`,
-        ),
-      },
-      502,
-    );
-  }
+  console.error("internal error", error instanceof Error ? error.stack ?? error.message : error);
   return json({ error: "internal", text: t(locale, "Внутренняя ошибка.", "Ішкі қате.") }, 500);
 }
 
-export function usageOf(response: { usage: { input_tokens: number; output_tokens: number } }) {
-  return { input_tokens: response.usage.input_tokens, output_tokens: response.usage.output_tokens };
+/** usage провайдера → формат ответа приложения `{ input_tokens, output_tokens }`. */
+export function usageOf(result: ProviderResult<unknown>): { input_tokens: number; output_tokens: number } | undefined {
+  return result.usage ? { input_tokens: result.usage.inputTokens, output_tokens: result.usage.outputTokens } : undefined;
 }

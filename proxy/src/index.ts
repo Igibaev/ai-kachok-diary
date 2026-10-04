@@ -1,23 +1,26 @@
 /**
  * FitCoach AI — AI-прокси для white-label приложения.
  *
- * Зачем: ключ Anthropic хранится у фитнес-клуба (в секретах Cloudflare), а не в приложении.
+ * Зачем: ключ нейросети хранится у фитнес-клуба (в секретах Cloudflare), а не в приложении.
  * Приложение шлёт запрос с токеном приложения, прокси проверяет токен, лимиты на устройство
- * и общий дневной лимит, вызывает Claude и возвращает результат.
+ * и общий дневной лимит, вызывает модель через слой providers/ и возвращает результат.
+ *
+ * Какая нейросеть — вопрос конфигурации (AI_PROVIDER / AI_MODEL / CHEF_*, см. providers/index.ts и README):
+ * Claude через SDK или любая OpenAI-совместимая модель с vision + JSON (GPT, Gemini, DeepSeek, OpenRouter, Ollama…).
  *
  * Эндпоинты:
- *   GET  /health          — состояние, модель, список фич
+ *   GET  /health          — состояние, провайдеры/модели (без секретов), список фич
  *   POST /v1/chat         — AI-тренер (текстовый диалог)
  *   POST /v1/meal-plan    — AI-повар: план питания на 3/5/7 дней + список покупок (mealPlan.ts)
  *   POST /v1/food-photo   — AI-повар: фото еды → блюда, граммы, КБЖУ (foodPhoto.ts)
  *
  * Деплой: см. README.md в этой папке (wrangler deploy, ~10 минут).
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { applyLimits, DEFAULT_MODEL, guardRequest, json, mapUpstreamError, parsePositiveInt, resolveDeviceId, t, usageOf } from "./common.ts";
+import { applyLimits, guardRequest, json, mapUpstreamError, parsePositiveInt, providerOrResponse, resolveDeviceId, t, usageOf } from "./common.ts";
 import type { Env } from "./common.ts";
 import { handleFoodPhoto } from "./foodPhoto.ts";
 import { handleMealPlan } from "./mealPlan.ts";
+import { describeProviders, ProviderError } from "./providers/index.ts";
 
 export type { Env } from "./common.ts";
 
@@ -86,6 +89,9 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   const deviceId = resolveDeviceId(request, body.deviceId);
   if (!deviceId) return json({ error: "bad_device_id" }, 400);
 
+  const provider = providerOrResponse(env, "chat", locale);
+  if (provider instanceof Response) return provider;
+
   const limited = await applyLimits(request, env, kv, deviceId, locale, {
     prefix: "rl",
     perDevice: parsePositiveInt(env.DAILY_LIMIT_PER_DEVICE, 40),
@@ -93,45 +99,27 @@ async function handleChat(request: Request, env: Env): Promise<Response> {
   });
   if (limited) return limited;
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, maxRetries: 2, timeout: 60_000 });
-  const model = env.MODEL ?? DEFAULT_MODEL;
-
   try {
-    const response = await client.beta.messages.create({
-      model,
-      max_tokens: 2048,
-      system: [{ type: "text", text: body.system, cache_control: { type: "ephemeral" } }],
-      messages: body.messages,
-      output_config: { effort: "low" },
-      // При отказе классификатора безопасности запрос автоматически уходит на рекомендованную модель.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-    });
-
-    if (response.stop_reason === "refusal") {
+    // Таймаут 60 с, до 2 повторов при сетевых ошибках (чат короткий).
+    const result = await provider.generateText({ system: body.system, messages: body.messages, maxTokens: 2048, timeoutMs: 60_000, maxRetries: 2 });
+    const response: ChatResponse = {
+      text: result.value || t(locale, "Нет ответа. Попробуй переформулировать.", "Жауап жоқ. Басқаша сұрап көріңіз."),
+      model: result.model,
+      usage: usageOf(result),
+    };
+    return json(response);
+  } catch (error) {
+    if (error instanceof ProviderError && error.kind === "refused") {
+      // Отказ модели в чате — не ошибка для пользователя, а вежливый ответ.
       return json({
         text: t(
           locale,
           "Я не могу ответить на этот вопрос. По медицинским вопросам обратись к врачу, а по тренировкам — к тренеру клуба.",
           "Бұл сұраққа жауап бере алмаймын. Медициналық сұрақтар бойынша дәрігерге, жаттығу бойынша клуб жаттықтырушысына жүгініңіз.",
         ),
-        model: response.model,
+        model: provider.model,
       } satisfies ChatResponse);
     }
-
-    const text = response.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
-
-    const result: ChatResponse = {
-      text: text || t(locale, "Нет ответа. Попробуй переформулировать.", "Жауап жоқ. Басқаша сұрап көріңіз."),
-      model: response.model,
-      usage: usageOf(response),
-    };
-    return json(result);
-  } catch (error) {
     return mapUpstreamError(error, locale, { ru: "AI-тренер", kk: "AI-жаттықтырушы" });
   }
 }
@@ -141,7 +129,9 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, model: env.MODEL ?? DEFAULT_MODEL, features: FEATURES });
+      // `model` оставлен для совместимости со старыми проверками (= модель чата); секреты и baseUrl не отдаём.
+      const providers = describeProviders(env);
+      return json({ ok: true, model: providers.chat.model, features: FEATURES, providers });
     }
 
     if (request.method !== "POST") {
