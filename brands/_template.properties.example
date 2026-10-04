@@ -45,4 +45,6 @@ cardColor=#1C1C1C
 # (офлайн-ответы) или с ключом разработчика из настроек.
 aiProxyUrl=
 aiProxyToken=
+# Модель ТОЛЬКО для режима разработчика (debug-сборка, свой ключ). На прокси модель и провайдер
+# (Claude / OpenAI / Gemini / DeepSeek / локальная) задаются переменными AI_* и CHEF_* в proxy/wrangler.toml.
 aiModel=claude-opus-5
