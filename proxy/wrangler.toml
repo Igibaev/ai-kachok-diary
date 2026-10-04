@@ -18,6 +18,8 @@ compatibility_flags = ["nodejs_compat"]
 #   "gemini-2.5-flash" (Gemini); "google/gemini-2.5-flash" (OpenRouter); "llama3.2-vision" (Ollama).
 #   Старое имя MODEL продолжает работать, если AI_MODEL не задана.
 # AI_MODEL = "claude-opus-5"
+# ВНИМАНИЕ: при переходе на AI_PROVIDER = "openai" задайте AI_MODEL (или замените значение MODEL ниже) — иначе
+# имя модели Claude уйдёт в OpenAI-совместимый API и запросы получат 502 upstream_error; /health покажет текущую модель.
 MODEL = "claude-opus-5"
 # AI_BASE_URL — только для openai. По умолчанию https://api.openai.com/v1. Примеры:
 #   Gemini      "https://generativelanguage.googleapis.com/v1beta/openai"

@@ -96,10 +96,39 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
   const baseUrl = config.baseUrl.replace(/\/+$/, "");
   const endpoint = `${baseUrl}/chat/completions`;
 
-  /** Один HTTP-вызов. Возвращает ответ целиком; HTTP-ошибки (кроме 400, которое решает вызывающий) → ProviderError. */
+  /** Читает тело ответа, прерываясь по тому же AbortSignal: таймаут покрывает и скачивание тела, не только заголовки. */
+  async function readBody(response: Response, signal: AbortSignal): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const onAbort = () => {
+        response.body?.cancel().catch(() => undefined);
+        reject(new DOMException("aborted", "AbortError"));
+      };
+      if (signal.aborted) return onAbort();
+      signal.addEventListener("abort", onAbort, { once: true });
+      response.text().then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+    });
+  }
+
+  /** Старые модели/серверы принимают `max_tokens`, новые модели OpenAI (gpt-5, o-серия) — только `max_completion_tokens`. */
+  function mentionsMaxCompletionTokens(bodyText: string): boolean {
+    return bodyText.toLowerCase().includes("max_completion_tokens");
+  }
+
+  /** Один HTTP-вызов. Возвращает ответ целиком; HTTP-ошибки (кроме 400, которое решает вызывающий) → ProviderError.
+   *  400 с требованием `max_completion_tokens` повторяется один раз с этим параметром вместо `max_tokens`. */
   async function call(body: Record<string, unknown>, timeoutMs: number): Promise<{ status: number; text: string; data: OaiResponse | null }> {
+    const result = await callOnce(body, timeoutMs);
+    if (result.status === 400 && "max_tokens" in body && mentionsMaxCompletionTokens(result.text)) {
+      const { max_tokens, ...rest } = body;
+      return callOnce({ ...rest, max_completion_tokens: max_tokens }, timeoutMs);
+    }
+    return result;
+  }
+
+  async function callOnce(body: Record<string, unknown>, timeoutMs: number): Promise<{ status: number; text: string; data: OaiResponse | null }> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let text: string;
     let response: Response;
     try {
       // globalThis.fetch берётся в момент вызова — тесты подменяют его.
@@ -113,6 +142,10 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
         body: JSON.stringify(body),
         signal: controller.signal,
       });
+      text = await readBody(response, controller.signal).catch((error: unknown) => {
+        if (controller.signal.aborted) throw error;
+        return ""; // тело не дочиталось не по таймауту — решаем по статусу
+      });
     } catch (error) {
       if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) {
         throw new ProviderError("timeout", `timeout after ${timeoutMs} ms`);
@@ -122,7 +155,6 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
       clearTimeout(timer);
     }
 
-    const text = await response.text().catch(() => "");
     if (response.status === 401 || response.status === 403) throw new ProviderError("auth", text.slice(0, 500), response.status);
     if (response.status === 429) throw new ProviderError("rate_limit", text.slice(0, 500), response.status);
     if (response.status === 408 || response.status === 504) throw new ProviderError("timeout", text.slice(0, 500), response.status);
@@ -139,15 +171,16 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
     return { status: response.status, text, data };
   }
 
-  /** Извлекает текст первого choice; finish_reason length → bad_output, content_filter/refusal → refused. */
-  function readChoice(data: OaiResponse): { text: string; model: string; usage?: ProviderResult<unknown>["usage"] } {
+  /** Извлекает текст первого choice; content_filter/refusal → refused. finish_reason length → bad_output только для JSON
+   *  (обрезанный JSON бесполезен); обрезанный текст чата возвращается как есть — как у Anthropic при stop_reason max_tokens. */
+  function readChoice(data: OaiResponse, truncationIsError: boolean): { text: string; model: string; usage?: ProviderResult<unknown>["usage"] } {
     const choice = data.choices?.[0];
     if (!choice) throw new ProviderError("bad_output", "no choices in response");
     const finish = choice.finish_reason ?? undefined;
     if (finish === "content_filter" || (typeof choice.message?.refusal === "string" && choice.message.refusal)) {
       throw new ProviderError("refused", choice.message?.refusal || "content_filter");
     }
-    if (finish === "length") throw new ProviderError("bad_output", "response truncated (finish_reason=length)");
+    if (truncationIsError && finish === "length") throw new ProviderError("bad_output", "response truncated (finish_reason=length)");
     const usage =
       data.usage && typeof data.usage.prompt_tokens === "number" && typeof data.usage.completion_tokens === "number"
         ? { inputTokens: data.usage.prompt_tokens, outputTokens: data.usage.completion_tokens }
@@ -163,7 +196,7 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
       const messages: OaiMessage[] = [{ role: "system", content: input.system }, ...input.messages];
       const result = await call({ model: config.model, max_tokens: input.maxTokens, messages }, input.timeoutMs);
       if (result.status === 400) throw new ProviderError("upstream", result.text.slice(0, 500), 400);
-      const choice = readChoice(result.data!);
+      const choice = readChoice(result.data!, false);
       return { value: choice.text.trim(), model: choice.model, usage: choice.usage };
     },
 
@@ -205,7 +238,7 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
       let lastUsage: ProviderResult<unknown>["usage"];
       let lastError = "";
       for (let attempt = 0; attempt < 2; attempt++) {
-        const choice = readChoice(await request(history));
+        const choice = readChoice(await request(history), true);
         lastModel = choice.model;
         lastUsage = choice.usage;
         let parsed: unknown;

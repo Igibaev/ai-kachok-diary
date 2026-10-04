@@ -115,7 +115,7 @@ test("(3b) невалидный первый ответ, валидный пов
   assert.equal(calls.length, 2);
 });
 
-test("(4) HTTP и finish_reason → kind: 401→auth, 403→auth, 429→rate_limit, 5xx→upstream, content_filter→refused, length→bad_output", async () => {
+test("(4) HTTP и finish_reason → kind: 401→auth, 403→auth, 429→rate_limit, 5xx→upstream, content_filter→refused", async () => {
   const kindOf = async (responses: Parameters<typeof mockFetch>[0]) => {
     mockFetch(responses);
     try {
@@ -132,7 +132,6 @@ test("(4) HTTP и finish_reason → kind: 401→auth, 403→auth, 429→rate_lim
   assert.equal(await kindOf([{ status: 504, body: "gateway timeout" }]), "timeout:504");
   assert.equal(await kindOf([{ status: 400, body: { error: { message: "model not found" } } }]), "upstream:400");
   assert.equal(await kindOf([{ body: completion("", {}, "content_filter") }]), "refused:");
-  assert.equal(await kindOf([{ body: completion("{\"name\":", {}, "length") }]), "bad_output:");
   assert.equal(await kindOf([{ body: { model: "m", choices: [{ finish_reason: "stop", message: { refusal: "I can't help with that" } }] } }]), "refused:");
   assert.equal(await kindOf([{ body: { model: "m", choices: [] } }]), "bad_output:");
   assert.equal(
@@ -142,6 +141,39 @@ test("(4) HTTP и finish_reason → kind: 401→auth, 403→auth, 429→rate_lim
       },
     ]),
     "connection:",
+  );
+});
+
+test("(4a) finish_reason=length: для JSON → bad_output (обрезанный JSON бесполезен), для текста чата → частичный текст, как у Anthropic", async () => {
+  mockFetch([{ body: completion("{\"name\":", {}, "length") }]);
+  await assert.rejects(provider().generateJson(jsonInput()), (e: unknown) => e instanceof ProviderError && e.kind === "bad_output");
+  mockFetch([{ body: completion("Начало длинного ответа…", {}, "length") }]);
+  const result = await provider().generateText({ system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 10, timeoutMs: 5_000 });
+  assert.equal(result.value, "Начало длинного ответа…");
+});
+
+test("(4c) 400 «use max_completion_tokens» → один повтор с max_completion_tokens вместо max_tokens (gpt-5 / o-серия)", async () => {
+  mockFetch([
+    { status: 400, body: { error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", param: "max_tokens" } } },
+    { body: completion("ok") },
+  ]);
+  const result = await provider().generateText({ system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 77, timeoutMs: 5_000 });
+  assert.equal(result.value, "ok");
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].body.max_tokens, 77);
+  assert.equal(calls[1].body.max_tokens, undefined);
+  assert.equal(calls[1].body.max_completion_tokens, 77);
+  // Прочие 400 не повторяются.
+  mockFetch([{ status: 400, body: { error: { message: "model not found" } } }, { body: completion("never") }]);
+  await assert.rejects(provider().generateText({ system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 1, timeoutMs: 5_000 }));
+  assert.equal(calls.length, 3);
+});
+
+test("(4d) таймаут покрывает и чтение тела: заголовки пришли, тело зависло → timeout, а не вечное ожидание", async () => {
+  globalThis.fetch = (async () => new Response(new ReadableStream<Uint8Array>({ start() {} }), { status: 200 })) as typeof fetch;
+  await assert.rejects(
+    provider().generateText({ system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 10, timeoutMs: 30 }),
+    (e: unknown) => e instanceof ProviderError && e.kind === "timeout",
   );
 });
 
